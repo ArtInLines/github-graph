@@ -1,3 +1,4 @@
+from neo4j import GraphDatabase
 import requests
 import json
 import dotenv
@@ -5,6 +6,7 @@ import os
 import time
 dotenv.load_dotenv()
 
+print_req_info = True
 headers = {
 	"Authorization": "Bearer " + os.getenv("API_TOKEN"),
 }
@@ -19,7 +21,8 @@ def req(endpoint, mapper = None):
 	make_req = True
 	while make_req:
 		r = requests.get(url, params=payload, headers=headers)
-		print("[INFO] Making request to " + url)
+		if print_req_info:
+			print("[INFO] Making request to " + url)
 		if 200 <= r.status_code < 300:
 			# Successfull request
 			forks = r.json()
@@ -68,9 +71,9 @@ def print_graph(g):
 		for edge in node.edges:
 			print("   " + g[edge].name)
 
-def get_forks(start_acc: str, visited_accs: dict, visited_repos: dict, graph: [graph_node], degress: int = 2):
+def get_forks(start_acc: str, degrees: int = 2, graph: [graph_node] = [], visited_accs: dict = {}, visited_repos: dict = {}):
 	if start_acc in visited_accs:
-		return
+		return graph
 	res = len(graph)
 	visited_accs[start_acc] = res
 	acc_node = graph_node(start_acc)
@@ -93,25 +96,32 @@ def get_forks(start_acc: str, visited_accs: dict, visited_repos: dict, graph: [g
 					else:
 						if degrees > 1:
 							fork_acc = fork.split("/")[0]
-							get_forks(fork_acc, visited_accs, visited_repos, graph, degrees - 1)
+							get_forks(fork_acc, degrees - 1, graph, visited_accs, visited_repos)
 							repo_node.edges.append(visited_repos[fork])
 						else:
 							repo_node.edges.append(len(graph))
 							visited_repos[fork] = len(graph)
 							r = graph_node(fork)
 							graph.append(r)
+	return graph
 
-start_acc     = "Rex2002"
-visited_accs  = {}
-visited_repos = {}
-graph         = []
-degrees       = 2
-get_forks(start_acc, visited_accs, visited_repos, graph, degrees)
-print_graph(graph)
-# print("")
-# print("Visited:")
-# print("----------------")
-# for x in visited_accs:
-# 	print(x + ": " + str(visited_accs[x]))
-# for x in visited_repos:
-# 	print(x + ": " + str(visited_repos[x]))
+if __name__ == "__main__":
+	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
+	db.verify_connectivity()
+	graph = get_forks("Rex2002", 2)
+
+	print("Syncing graph with neo4j...")
+	db.execute_query("MATCH ()-[r]->() DELETE r")
+	db.execute_query("MATCH (p) DELETE (p)")
+	for node in graph:
+		db.execute_query("MERGE (u:User {name: $name})", name=node.name.split("/")[0], database_="neo4j")
+		if "/" in node.name:
+			db.execute_query("MATCH (u:User {name: $username}) MERGE (u)-[o:OWNS]->(r:Repo {name: $reponame})", username=node.name.split("/")[0], reponame=node.name.split("/")[1], database_="neo4j")
+	for node in graph:
+		if "/" in node.name:
+			for edge in node.edges:
+				print(node.name + " -> " + graph[edge].name)
+				db.execute_query("MATCH (u1:User {name: $user1}) MATCH (u1)-[:OWNS]->(r1:Repo {name: $repo1}) MATCH (u2:User {name: $user2}) MATCH (u2)-[:OWNS]->(r2:Repo {name: $repo2}) MERGE (r1)-[:FORKED_TO]->(r2)", user1=node.name.split("/")[0], repo1=node.name.split("/")[1], user2=graph[edge].name.split("/")[0], repo2=graph[edge].name.split("/")[1])
+
+	print("Done :)")
+	db.close()
