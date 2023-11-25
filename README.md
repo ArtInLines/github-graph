@@ -76,10 +76,10 @@ We specify the following labels with their specific attributes for edges:
   - (User) -> (User)
 - FORKED_TO
   - (Repo) -> (Repo)
-- STARRED_BY
-  - (Repo) -> (User)
-- CONTRIBUTED_BY
-  - (Repo) -> (User)
+- STARRED
+  - (User) -> (Repo)
+- CONTRIBUTED
+  - (User) -> (Repo)
 
 Lastly, we shall give some examples to illustrate this Data Model:
 
