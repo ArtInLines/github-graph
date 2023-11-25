@@ -63,10 +63,10 @@ We specify the following labels with their specific attributes for nodes:
 - User
   - name: string (unique)
   - avatar: string
+  - visted: int [how often the account was already visited in the process of looking for nodes]
 - Repo
-  - name: string
-
-@Note: It might be better to store a repo's fullname (aka '<username>/<repo-name>') instead of just its short name, so the 'unique' constraint can be added. Maybe Cypher allows adding such a constraint without storing the fullname as well though.
+  - name: string [this is the repo's full name which includes the owner account's username]
+  - visited: int
 
 We specify the following labels with their specific attributes for edges:
 
@@ -88,8 +88,8 @@ Lastly, we shall give some examples to illustrate this Data Model:
 Our notation for specifying the model is as follows:
 
 - <Label1>
-  - <Key1>: <Value-Type1> (<Optional Constraint>)
-  - <Key2>: <Value-Type2>
+  - <Key1>: <Value-Type1> (<Optional Constraint>) [<Optional Documentation>]
+  - <Key2>: <Value-Type2> [<Optional Documentation>]
 - <Label2>
   - <Key3>: <Value-Type3>
 

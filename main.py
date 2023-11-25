@@ -1,4 +1,4 @@
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, Driver
 import requests
 import json
 import dotenv
@@ -11,7 +11,7 @@ headers = {
 	"Authorization": "Bearer " + os.getenv("API_TOKEN"),
 }
 
-def req(endpoint, mapper = None):
+def req_list(endpoint, mapper = None):
 	res = []
 	payload = {
 		"page": 1,
@@ -56,72 +56,71 @@ def req(endpoint, mapper = None):
 				make_req = True
 	return res
 
-class graph_node:
-	name:  str   = ""
-	edges: [int] = []
-	def __init__(self, name):
-		self.name  = name
-		self.edges = []
+def clean_db(db: Driver):
+	db.execute_query("MATCH (p) DETACH DELETE (p)")
 
-def print_graph(g):
-	print("Graph:")
-	print("---------------")
-	for node in g:
-		print(node.name + ":")
-		for edge in node.edges:
-			print("   " + g[edge].name)
 
-def get_forks(start_acc: str, degrees: int = 2, graph: [graph_node] = [], visited_accs: dict = {}, visited_repos: dict = {}):
-	if start_acc in visited_accs:
-		return graph
-	res = len(graph)
-	visited_accs[start_acc] = res
-	acc_node = graph_node(start_acc)
-	graph.append(acc_node)
+def search(start_acc: str, db: Driver, degrees: int = 2):
+	records, _, _ = db.execute_query("""
+		MERGE (u:User {name: $uname})
+		ON CREATE SET u.visited=1
+		ON MATCH SET u.visited=u.visited+1
+		RETURN u
+	""", uname=start_acc)
+	assert(len(records) == 1)
+	if records[0].value()['visited'] > 1:
+		return # This account was visited before already
+	user = requests.get(f"https://api.github.com/users/{start_acc}", headers=headers)
+	assert(200 <= user.status_code < 300)
+	db.execute_query("""
+		MATCH (u:User {name: $uname})
+		SET u.avatar=$avatar
+	""", uname=start_acc, avatar=user.json()["avatar_url"])
+	user = None
 
-	acc_repos = req(f"users/{start_acc}/repos", lambda x: x["full_name"])
-	for repo in acc_repos:
-		if repo in visited_repos:
-			acc_node.edges.append(visited_repos[repo])
-		else:
-			visited_repos[repo] = len(graph)
-			acc_node.edges.append(len(graph))
-			repo_node = graph_node(repo)
-			graph.append(repo_node)
-			if degrees > 0:
-				forks = req(f"repos/{repo}/forks", lambda x: x["full_name"])
-				for fork in forks:
-					if fork in visited_repos:
-						repo_node.edges.append(visited_repos[fork])
-					else:
-						if degrees > 1:
-							fork_acc = fork.split("/")[0]
-							get_forks(fork_acc, degrees - 1, graph, visited_accs, visited_repos)
-							repo_node.edges.append(visited_repos[fork])
-						else:
-							repo_node.edges.append(len(graph))
-							visited_repos[fork] = len(graph)
-							r = graph_node(fork)
-							graph.append(r)
-	return graph
+	repos = req_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
+	for repo in repos:
+		records, _, _ = db.execute_query("""
+			MATCH (u:User {name: $uname})
+			MERGE (r:Repo {name: $rname})
+			ON CREATE SET r.visited=1
+			ON MATCH SET r.visited=r.visited+1
+			MERGE (u)-[:OWNS]->(r)
+			RETURN r
+		""", uname=start_acc, rname=repo)
+		assert(len(records) == 1)
+		r = records[0].value()
+		if r['visited'] <= 1:
+			forks = req_list(f"repos/{repo}/forks", lambda x: x["full_name"])
+			for fork in forks:
+				records, _, _ = db.execute_query("""
+					MERGE (r:Repo {name: $rname})
+					ON CREATE SET r.visited=0
+					RETURN r
+				""", rname=fork)
+				assert(len(records) == 1)
+				r = records[0].value()
+				records, _, _ = db.execute_query("""
+					MATCH (r1:Repo {name: $r1name})
+					MATCH (r2:Repo {name: $r2name})
+					CREATE (r1)-[rel:FORKED_TO]->(r2)
+				""", r1name=repo, r2name=fork)
+				if r['visited'] == 0:
+					db.execute_query("""
+						MATCH (r:Repo {name: $rname})
+						MATCH (u:User {name: $uname})
+						CREATE (u)-[:OWNS]->(r)
+					""", rname=fork, uname=fork.split("/")[0])
+					search(fork.split("/")[0], db, degrees-1)
 
 if __name__ == "__main__":
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
-	graph = get_forks("Rex2002", 2)
 
-	print("Syncing graph with neo4j...")
-	db.execute_query("MATCH ()-[r]->() DELETE r")
-	db.execute_query("MATCH (p) DELETE (p)")
-	for node in graph:
-		db.execute_query("MERGE (u:User {name: $name})", name=node.name.split("/")[0], database_="neo4j")
-		if "/" in node.name:
-			db.execute_query("MATCH (u:User {name: $username}) MERGE (u)-[o:OWNS]->(r:Repo {name: $reponame})", username=node.name.split("/")[0], reponame=node.name.split("/")[1], database_="neo4j")
-	for node in graph:
-		if "/" in node.name:
-			for edge in node.edges:
-				print(node.name + " -> " + graph[edge].name)
-				db.execute_query("MATCH (u1:User {name: $user1}) MATCH (u1)-[:OWNS]->(r1:Repo {name: $repo1}) MATCH (u2:User {name: $user2}) MATCH (u2)-[:OWNS]->(r2:Repo {name: $repo2}) MERGE (r1)-[:FORKED_TO]->(r2)", user1=node.name.split("/")[0], repo1=node.name.split("/")[1], user2=graph[edge].name.split("/")[0], repo2=graph[edge].name.split("/")[1])
+	clean_db(db)
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
+	search("Rex2002", db)
 
 	print("Done :)")
 	db.close()
