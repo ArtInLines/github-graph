@@ -7,13 +7,16 @@ import os
 import time
 import math
 from datetime import datetime
+from sys import argv
 dotenv.load_dotenv()
 
-timeout_len = 0
+default_degrees = 5
+default_start_acc = "Rex2002"
 print_req_info = True
 headers = {
 	"Authorization": "Bearer " + os.getenv("API_TOKEN"),
 }
+timeout_len = 0
 
 def get(url: str, **kwargs) -> requests.Response:
 	timeout_len = globals()["timeout_len"]
@@ -247,37 +250,21 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 			t.join()
 
 if __name__ == "__main__":
-	start = time.time()
+	if len(argv) != 3:
+		print("\033[31mInvalid Amount of arguments\033[0m")
+		print("Usage:")
+		print(f"> python {argv[0]} <Account to start Search From> <Max Degrees for Search>")
+		print("")
+		print("Example:")
+		print(f"> python {argv[0]} {default_start_acc} {default_degrees}")
+		os._exit(1)
+	start_acc = argv[1]
+	degrees   = int(argv[2])
+
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
 	clean_db(db)
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
-
-	search_start = time.time()
-	search("Rex2002", db, 2)
-	search_end   = time.time()
-
-	expected_nodes_len = 39
-	expected_edges_len = 88
-	expected_visited_users_len = 29
-	nodes, _, _ = db.execute_query("MATCH (p) RETURN p")
-	edges, _, _ = db.execute_query("MATCH ()-[r]->() RETURN r")
-	visited_users, _, _ = db.execute_query("MATCH (p:User) WHERE p.avatar IS NOT NULL RETURN p")
-	if len(nodes) == expected_nodes_len:
-		print("\033[32m#nodes = " + str(len(nodes)) + "\033[0m")
-	else:
-		print("\033[31m#nodes = " + str(len(nodes)) + "\033[0m")
-	if len(edges) == expected_edges_len:
-		print("\033[32m#edges = " + str(len(edges)) + "\033[0m")
-	else:
-		print("\033[31m#edges = " + str(len(edges)) + "\033[0m")
-	if len(visited_users) == expected_visited_users_len:
-		print("\033[32m#visited_users = " + str(len(visited_users)) + "\033[0m")
-	else:
-		print("\033[31m#visited_users = " + str(len(visited_users)) + "\033[0m")
-
+	search(start_acc, db, degrees)
 	db.close()
-	end = time.time()
-	print("Total Time:    " + str(round(end - start, 3)) + "s")
-	print("Searcing Time: " + str(round(search_end - search_start, 3)) + "s")
