@@ -176,16 +176,16 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 		t.start()
 		meta_threads.append(t)
 
-		# threads.append(None)
-		# t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"users/{start_acc}/following", "login", following_count, """
-		# 	MATCH (u1:User {name: $uname})
-		# 	MERGE (u2:User {name: $followeename})
-		# 	ON CREATE SET u2.visited = 0
-		# 	MERGE (u1)-[:FOLLOWS]->(u2)
-		# 	RETURN u2
-		# """, "followeename"), kwargs={"uname": start_acc})
-		# t.start()
-		# meta_threads.append(t)
+		threads.append(None)
+		t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"users/{start_acc}/following", "login", following_count, """
+			MATCH (u1:User {name: $uname})
+			MERGE (u2:User {name: $followeename})
+			ON CREATE SET u2.visited = 0
+			MERGE (u1)-[:FOLLOWS]->(u2)
+			RETURN u2
+		""", "followeename"), kwargs={"uname": start_acc})
+		t.start()
+		meta_threads.append(t)
 
 		repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
 		for repo in repos:
@@ -233,16 +233,16 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 				t.start()
 				meta_threads.append(t)
 
-				# threads.append(None)
-				# t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"repos/{repo}/stargazers", "login", None, """
-				# 	MATCH (r:Repo {name: $rname})
-				# 	MERGE (u:User {name: $uname})
-				# 	ON CREATE SET u.visited = 0
-				# 	CREATE (u)-[:STARRED]->(r)
-				# 	RETURN u
-				# """, "uname"), kwargs={"rname": repo})
-				# t.start()
-				# meta_threads.append(t)
+				threads.append(None)
+				t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"repos/{repo}/stargazers", "login", None, """
+					MATCH (r:Repo {name: $rname})
+					MERGE (u:User {name: $uname})
+					ON CREATE SET u.visited = 0
+					CREATE (u)-[:STARRED]->(r)
+					RETURN u
+				""", "uname"), kwargs={"rname": repo})
+				t.start()
+				meta_threads.append(t)
 	for mt in meta_threads:
 		mt.join()
 	for ts in threads:
