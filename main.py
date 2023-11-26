@@ -19,6 +19,7 @@ def get(url: str, **kwargs) -> requests.Response:
 	timeout_len = globals()["timeout_len"]
 	if timeout_len > 0:
 		time.sleep(timeout_len)
+		globals()["timeout_len"] = 0
 	if print_req_info:
 		print("[INFO] Making request to " + url)
 	r = requests.get(url, **kwargs)
@@ -39,6 +40,7 @@ def get(url: str, **kwargs) -> requests.Response:
 		until = datetime.fromtimestamp(int(reset)).strftime("%H:%M")
 		print(f"\033[33m[INFO] Rate-Limited for {timeout_len}s until {until} UTC\033[0m")
 		time.sleep(timeout_len)
+		globals()["timeout_len"] = 0
 		return get(url, **kwargs)
 	else:
 		# No idea what happened
