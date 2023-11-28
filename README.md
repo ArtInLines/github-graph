@@ -4,7 +4,7 @@ This project was created for uni course "Big Data".
 
 ## Disclaimer
 
-This project is stil a Work-in-Progress. This means, not everything might work and the documentation might quickly become outdated.
+This project is still a Work-in-Progress. This means, not everything might work and the documentation might quickly become outdated.
 
 ## Setup
 
