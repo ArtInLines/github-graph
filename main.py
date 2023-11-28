@@ -47,8 +47,8 @@ def get(url: str, **kwargs) -> requests.Response:
 		return get(url, **kwargs)
 	else:
 		# No idea what happened
-		print("\033[31m[ERROR] Received unknown status code: " + str(r.status_code) + "\033[0m")
-		os._exit(1)
+		print("\033[31m[ERROR] Received unknown status code: " + str(r.status_code) + " when requesting " + url + "\033[0m")
+		raise Exception(r)
 
 def get_json_list_threaded(url, payload, idx, arr, mapper):
 	try:
