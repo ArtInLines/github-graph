@@ -250,7 +250,7 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 			t.join()
 
 if __name__ == "__main__":
-	if 3 > len(argv) > 4:
+	if len(argv) != 3 and len(argv) != 4:
 		print("\033[31mInvalid Amount of arguments\033[0m")
 		print("Usage:")
 		print(f"> python {argv[0]} <Account to start Search From> <Max Degrees for Search> [-c]")
