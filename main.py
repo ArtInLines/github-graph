@@ -250,10 +250,11 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 			t.join()
 
 if __name__ == "__main__":
-	if len(argv) != 3:
+	if 3 > len(argv) > 4:
 		print("\033[31mInvalid Amount of arguments\033[0m")
 		print("Usage:")
-		print(f"> python {argv[0]} <Account to start Search From> <Max Degrees for Search>")
+		print(f"> python {argv[0]} <Account to start Search From> <Max Degrees for Search> [-c]")
+		print("The optional '-c' flag cleans the database before starting the script")
 		print("")
 		print("Example:")
 		print(f"> python {argv[0]} {default_start_acc} {default_degrees}")
@@ -263,7 +264,8 @@ if __name__ == "__main__":
 
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
-	clean_db(db)
+	if len(argv) == 4 and argv[3].startswith("-c"):
+		clean_db(db)
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
 	search(start_acc, db, degrees)
