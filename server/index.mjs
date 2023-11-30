@@ -42,15 +42,11 @@ app.get('/getRepoRelatives', (req, res) => {
 // gets general facts about the database
 app.get('/stats', (req, res) =>{
     const session = dbDriver.session();
-    session.executeRead( tx => {
-        tx.run('MATCH (p) RETURN COUNT(p);')
-        .then(result =>{
-            result.records.forEach(element => {
-                console.log(element)
-            });
-            res.send(result.records[0])
-            session.close()
-        })
+    session.executeRead( async tx => {
+        const nodeCount = await tx.run('MATCH (p) RETURN COUNT(p)')
+        const relationshipCount = await tx.run('MATCH () -[r]-> () RETURN COUNT(r);')
+        res.send('node count: ' + nodeCount.records[0]._fields[0].low + '<br/> relationship count: ' + relationshipCount.records[0]._fields[0].low)
+        session.close()
     })
     
 })
