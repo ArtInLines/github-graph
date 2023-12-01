@@ -19,18 +19,24 @@ app.get('/getRepoDistance', (req, res) => {
 
 // gets all nodes connected to a user up to a certain distance
 app.get('/getUserRelatives', (req, res) => {
-    const session = dbDriver.session();
-    session.executeRead( tx => {
-        tx.run('MATCH (p) RETURN COUNT(p);')
-        .then(result =>{
-            result.records.forEach(element => {
-                console.log(element)
-            });
-    
-        })
+    let session = dbDriver.session();
+    let relConstraint = '';
+    let minDist = (req.query['minDist'] != undefined) ? req.query['minDist'] : 1;
+    let maxDist = (req.query['maxDist'] != undefined) ? req.query['maxDist'] : 1
+    console.log(req.query)
+    if (req.query['user'] == undefined){
+        res.status(400)
+        res.send("invalid parameter user")
+        return;
+    }
+    if (req.query['relationShipConstraints'] != null && req.query['relationShipConstraints'] != undefined){
+        relConstraint = ':' + req.query['relationShipConstraints']
+    }
+    session.executeRead( async tx => {
+        const nodes = await tx.run(`MATCH (source:User{name: '${req.query['user']}'})-[rel${relConstraint}*${minDist}..${maxDist}]->(dest) RETURN source, dest, rel`);
+        res.send(nodes);
+        session.close();
     })
-    session.close()
-    res.send('finisehd');
 
 })
 
@@ -41,7 +47,7 @@ app.get('/getRepoRelatives', (req, res) => {
 
 // gets general facts about the database
 app.get('/stats', (req, res) =>{
-    const session = dbDriver.session();
+    let session = dbDriver.session();
     session.executeRead( async tx => {
         const nodeCount = await tx.run('MATCH (p) RETURN COUNT(p)')
         const relationshipCount = await tx.run('MATCH () -[r]-> () RETURN COUNT(r);')
