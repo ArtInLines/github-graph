@@ -75,7 +75,9 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 		req_amount = math.ceil(max_amount / payload["per_page"])
 		if req_amount > 1:
 			if print_req_info:
-				print("[INFO] Threading " + str(req_amount) + " GET calls at once")
+				print("[INFO] Threading " + str(req_amount) + " GET calls to " + url)
+			prev_print_req_info = print_req_info
+			globals()["print_req_info"] = False
 			for i in range(max_amount):
 				res.append(None)
 			threads = []
@@ -85,6 +87,7 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 				threads.append(t)
 			for t in threads:
 				t.join()
+			globals()["print_req_info"] = prev_print_req_info
 		else:
 			max_amount = None
 	if max_amount == None:
