@@ -124,7 +124,6 @@ def clean_db(db: Driver):
 def get_and_sync_list(db: Driver, endpoint: str, key: str, max: int, query: str, query_key: str = None, **query_args):
 	data = get_json_list(endpoint, lambda x: x[key], max)
 	for x in data:
-		records = []
 		if query_key != None:
 			query_args[query_key] = x
 		records, _, _ = db.execute_query(query, **query_args)
@@ -206,13 +205,20 @@ def search(start_acc: str, db: Driver):
 						MERGE (u)-[:OWNS]->(r)
 					""", rname=fork, uname=fork.split("/")[0])
 
-			get_and_sync_list(db, f"repos/{repo}/contributors", "login", None, """
-				MATCH (r:Repo {name: $rname})
-				MERGE (u:User {name: $uname})
-				ON CREATE SET u.visited = 0
-				MERGE (u)-[:CONTRIBUTED]->(r)
-				RETURN u
-			""", "uname", rname=repo)
+			contributors = get_json_list(f"repos/{repo}/contributors", lambda x: [x["login"], int(x["contributions"])])
+			total_contributions = 0
+			for x in contributors:
+				total_contributions += x[1]
+			for contributor in contributors:
+				records, _, _ = db.execute_query("""
+					MATCH (r:Repo {name: $rname})
+					MERGE (u:User {name: $uname})
+					ON CREATE SET u.visited = 0
+					MERGE (u)-[:CONTRIBUTED {weight: $w, contributions: $c}]->(r)
+					RETURN u
+				""", uname=contributor[0], rname=repo, w=1-(contributor[1]/total_contributions), c=contributor[1])
+				# The weight is the inverse of the percentage of the contributor's contribution relative to all contributions to this repo
+				assert(len(records) == 1)
 
 			get_and_sync_list(db, f"repos/{repo}/stargazers", "login", None, """
 				MATCH (r:Repo {name: $rname})
