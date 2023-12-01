@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+import signal
 import threading
 from neo4j import GraphDatabase, Driver
 import requests
@@ -15,6 +17,7 @@ headers = {
 	"Authorization": "Bearer " + os.getenv("API_TOKEN"),
 }
 timeout_len = 0
+close_process = False
 
 def get(url: str, **kwargs) -> requests.Response:
 	timeout_len = globals()["timeout_len"]
@@ -232,6 +235,14 @@ def search(start_acc: str, db: Driver):
 		SET u.visited = 1
 	""", uname=start_acc)
 
+def signal_handler(sig, frame):
+	if not close_process:
+		print('[INFO] Ending process soon')
+		globals()["close_process"] = True
+	else:
+		print('[INFO] Process was violently closed - bye')
+		os._exit(0)
+
 if __name__ == "__main__":
 	if len(argv) != 2 and len(argv) != 3:
 		print("\033[31mInvalid Amount of arguments\033[0m")
@@ -251,8 +262,10 @@ if __name__ == "__main__":
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
 
+	signal.signal(signal.SIGINT, signal_handler)
+
 	acc = start_acc
-	while True:
+	while not close_process:
 		search(acc, db)
 		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
 		if len(records) == 0:
