@@ -120,8 +120,7 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 def clean_db(db: Driver):
 	db.execute_query("MATCH (p) DETACH DELETE (p)")
 
-def get_and_sync_list(res: [int], idx: int, db: Driver, degrees: int, endpoint: str, key: str, max: int, query: str, query_key: str = None, **query_args):
-	threads = []
+def get_and_sync_list(db: Driver, degrees: int, endpoint: str, key: str, max: int, query: str, query_key: str = None, **query_args):
 	data = get_json_list(endpoint, lambda x: x[key], max)
 	for x in data:
 		records = []
@@ -131,10 +130,7 @@ def get_and_sync_list(res: [int], idx: int, db: Driver, degrees: int, endpoint: 
 		assert(len(records) == 1)
 		u = records[0].value()
 		if u['visited'] == 0:
-			t = threading.Thread(target=search, args=(u['name'], db, degrees - 1))
-			t.start()
-			threads.append(t)
-	res[idx] = threads
+			search(u['name'], db, degrees - 1)
 
 def search(start_acc: str, db: Driver, degrees: int = 2):
 	records, _, _ = db.execute_query("""
@@ -162,30 +158,22 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 		print("\033[33m[WARNING] Couldn't get data for user '" + start_acc + "'\033[0m")
 		return
 
-	meta_threads = []
-	threads      = []
 	if degrees > 0:
-		threads.append(None)
-		t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"users/{start_acc}/followers", "login", followers_count, """
+		get_and_sync_list(db, degrees, f"users/{start_acc}/followers", "login", followers_count, """
 			MATCH (u1:User {name: $uname})
 			MERGE (u2:User {name: $followername})
 			ON CREATE SET u2.visited = 0
 			MERGE (u1)<-[:FOLLOWS]-(u2)
 			RETURN u2
-		""", "followername"), kwargs={"uname": start_acc})
-		t.start()
-		meta_threads.append(t)
+		""", "followername", uname=start_acc)
 
-		threads.append(None)
-		t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"users/{start_acc}/following", "login", following_count, """
+		get_and_sync_list(db, degrees, f"users/{start_acc}/following", "login", following_count, """
 			MATCH (u1:User {name: $uname})
 			MERGE (u2:User {name: $followeename})
 			ON CREATE SET u2.visited = 0
 			MERGE (u1)-[:FOLLOWS]->(u2)
 			RETURN u2
-		""", "followeename"), kwargs={"uname": start_acc})
-		t.start()
-		meta_threads.append(t)
+		""", "followeename", uname=start_acc)
 
 		repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
 		for repo in repos:
@@ -222,32 +210,21 @@ def search(start_acc: str, db: Driver, degrees: int = 2):
 						""", rname=fork, uname=fork.split("/")[0])
 						search(fork.split("/")[0], db, degrees-1)
 
-				threads.append(None)
-				t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"repos/{repo}/contributors", "login", None, """
+				get_and_sync_list(db, degrees, f"repos/{repo}/contributors", "login", None, """
 					MATCH (r:Repo {name: $rname})
 					MERGE (u:User {name: $uname})
 					ON CREATE SET u.visited = 0
 					CREATE (u)-[:CONTRIBUTED]->(r)
 					RETURN u
-				""", "uname"), kwargs={"rname": repo})
-				t.start()
-				meta_threads.append(t)
+				""", "uname", rname=repo)
 
-				threads.append(None)
-				t = threading.Thread(target=get_and_sync_list, args=(threads, len(threads) - 1, db, degrees, f"repos/{repo}/stargazers", "login", None, """
+				get_and_sync_list(db, degrees, f"repos/{repo}/stargazers", "login", None, """
 					MATCH (r:Repo {name: $rname})
 					MERGE (u:User {name: $uname})
 					ON CREATE SET u.visited = 0
 					CREATE (u)-[:STARRED]->(r)
 					RETURN u
-				""", "uname"), kwargs={"rname": repo})
-				t.start()
-				meta_threads.append(t)
-	for mt in meta_threads:
-		mt.join()
-	for ts in threads:
-		for t in ts:
-			t.join()
+				""", "uname", rname=repo)
 
 if __name__ == "__main__":
 	if len(argv) != 3 and len(argv) != 4:
