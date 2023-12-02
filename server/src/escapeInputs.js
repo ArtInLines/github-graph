@@ -2,7 +2,6 @@ let escapeUser = (username) => {
     username = username.replace("\\", "\\\\")
     username = username.replace("'", "\\'")
     username = username.replace('"', '\\"')
-    console.log("escaped string: " +username)
 
     return username;
 }

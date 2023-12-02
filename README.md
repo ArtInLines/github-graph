@@ -102,3 +102,28 @@ For edges, we expand this notation to also specify the labels of nodes that sit 
 - <Label2>
   - (<Node-Label-From2>) -> (<Node-Label-To2>)
   - <Key3>: <Value-Type3>
+
+## API
+
+The express API currently offers 3 endpoints:
+
+### /getRelatives
+
+gets the n-clique of a specified target.
+The parameter `start` needs to be specified and describes which node should be a the center of the n-clique.
+Furthermore the user can specify if the start node is a repository (`Repo`) or a user (`User`) with the `type`-query-parameter. The default is `User`.
+A min-distance and a max-distance for relation can be provided with the `minDist` and `maxDist` parameters. The default value for both is `1`.
+Last but not least relationship constraints can be given, hence only allow nodes to be related via certain relationship-types.
+The parameter for that is called `relationShipConstraints` and should be of the format `relationShip1|relationShip2|...`. (e.g. `FOLLOW|CONTRIBUTED` would only allow nodes to be related via `FOLLOW` or `CONTRIBUTED` relationships)
+
+### /getDistance
+
+the `getDistance` endpoint tries to find the shortest distance between to nodes using a cypher-provided shortest-path algorithm.
+Start- and end-node must be specified with the `start` and `end` query parameters.
+The default-assumed type for both, start- and end-node is `User`, but can be altered with the parameter `typeStart` and `typeEnd` respectively.
+Furthermore the parameters `minDist`, `maxDist` and `relationShipConstraints` exist and do the same as in `/getRelatives`, except for the default value for `maxDist`, which here is 10.
+
+### /stats
+
+offers stats about the database.
+Currently only provides node- and relationship-count.
