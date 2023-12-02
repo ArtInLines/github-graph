@@ -12,20 +12,40 @@ from datetime import datetime
 from sys import argv
 dotenv.load_dotenv()
 
-print_req_info = True
-headers = {
-	"Authorization": "Bearer " + os.getenv("API_TOKEN"),
-}
-timeout_len = 0
+PRINT_REQ_INFO = True
 close_process = False
 
+# API_TOKS and timeouts are two parallel arrays
+API_TOKS = os.getenv("API_TOKEN").split(",")
+timeouts = []
+for _ in range(len(API_TOKS)):
+	timeouts.append(0)
+
+def get_min_timeout_idx() -> int:
+	min_timeout = timeouts[0]
+	out         = 0
+	cur_time = int(math.floor(time.time()))
+	for i in range(1, len(timeouts)):
+		if timeouts[i] < min_timeout:
+			min_timeout = timeouts[i]
+			out         = i
+			if min_timeout < cur_time:
+				break
+	return out
+
+def get_headers(api_tok_idx: int) -> dict:
+	return {
+		"Authorization": "Bearer " + API_TOKS[api_tok_idx],
+	}
+
 def get(url: str, **kwargs) -> requests.Response:
-	timeout_len = globals()["timeout_len"]
-	if timeout_len > 0:
-		time.sleep(timeout_len)
-		globals()["timeout_len"] = 0
-	if print_req_info:
-		print("[INFO] Making request to " + url)
+	api_tok_idx = get_min_timeout_idx()
+	cur_time = int(math.floor(time.time()))
+	if timeouts[api_tok_idx] > cur_time:
+		time.sleep(timeouts[api_tok_idx] - cur_time)
+	if PRINT_REQ_INFO:
+		print(f"[INFO] Making request with {api_tok_idx}. API-Token to {url}")
+	kwargs["headers"] = get_headers(api_tok_idx)
 	r = requests.get(url, **kwargs)
 
 	if 200 <= r.status_code < 300:
@@ -37,14 +57,10 @@ def get(url: str, **kwargs) -> requests.Response:
 		# Rate Limited
 		reset = r.headers["x-ratelimit-reset"]
 		cur_time = int(math.floor(time.time()))
-		timeout_len = int(reset) - cur_time
-		if (timeout_len > 3600):
-			timeout_len = 3600
-		globals()["timeout_len"] = timeout_len
+		timeouts[api_tok_idx] = int(reset)
+		# Logging:
 		until = datetime.fromtimestamp(int(reset)).strftime("%H:%M")
-		print(f"\033[33m[INFO] Rate-Limited for {timeout_len}s until {until} UTC\033[0m")
-		time.sleep(timeout_len)
-		globals()["timeout_len"] = 0
+		print(f"\033[33m[INFO] Rate-Limited for {timeouts[api_tok_idx] - cur_time}s until {until} UTC\033[0m")
 		return get(url, **kwargs)
 	else:
 		# No idea what happened
@@ -55,7 +71,7 @@ def get_json_list_threaded(url, payload, idx, arr, mapper):
 	try:
 		params = payload
 		params["page"] = idx
-		r = get(url, params=params, headers=headers)
+		r = get(url, params=params)
 		data = r.json()
 		if mapper == None:
 			for i in range(len(data)):
@@ -77,10 +93,10 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 	if max_amount != None:
 		req_amount = math.ceil(max_amount / payload["per_page"])
 		if req_amount > 1:
-			if print_req_info:
+			if PRINT_REQ_INFO:
 				print("[INFO] Threading " + str(req_amount) + " GET calls to " + url)
-			prev_print_req_info = print_req_info
-			globals()["print_req_info"] = False
+			prev_print_req_info = PRINT_REQ_INFO
+			globals()["PRINT_REQ_INFO"] = False
 			for i in range(max_amount):
 				res.append(None)
 			threads = []
@@ -90,14 +106,14 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 				threads.append(t)
 			for t in threads:
 				t.join()
-			globals()["print_req_info"] = prev_print_req_info
+			globals()["PRINT_REQ_INFO"] = prev_print_req_info
 		else:
 			max_amount = None
 	if max_amount == None:
 		make_req = True
 		while make_req:
 			try:
-				r = get(url, params=payload, headers=headers)
+				r = get(url, params=payload)
 				data = r.json()
 				if mapper != None:
 					res += list(map(mapper, data))
@@ -184,7 +200,7 @@ def search(start_acc: str, db: Driver):
 	followers_count = None
 	following_count = None
 	try:
-		user = get(f"https://api.github.com/users/{start_acc}", headers=headers).json()
+		user = get(f"https://api.github.com/users/{start_acc}").json()
 		db.execute_query("""
 			MATCH (u:User {name: $uname})
 			SET u.avatar=$avatar
@@ -222,7 +238,7 @@ def search(start_acc: str, db: Driver):
 	repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
 	for repo in repos:
 		try:
-			r = get(f"https://api.github.com/repos/{repo}", headers=headers).json()
+			r = get(f"https://api.github.com/repos/{repo}").json()
 			stargazers_count = int(r["stargazers_count"])
 			forks_count = int(r["forks_count"])
 
