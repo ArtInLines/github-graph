@@ -33,7 +33,7 @@ def get(url: str, **kwargs) -> requests.Response:
 		return r
 	elif r.status_code == 404:
 		raise Exception(r)
-	elif r.status_code in (403, 429):
+	elif r.status_code in 429:
 		# Rate Limited
 		reset = r.headers["x-ratelimit-reset"]
 		cur_time = int(math.floor(time.time()))
