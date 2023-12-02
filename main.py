@@ -187,6 +187,7 @@ def get_contributors(db: Driver, repo: str):
 		assert(len(records) == 1)
 
 def search(start_acc: str, db: Driver):
+	print("[INFO] Starting search for user " + start_acc)
 	records, _, _ = db.execute_query("""
 		MERGE (u:User {name: $uname})
 		ON CREATE SET u.visited=0
@@ -195,6 +196,7 @@ def search(start_acc: str, db: Driver):
 	""", uname=start_acc)
 	assert(len(records) == 1)
 	if records[0].value()['visited'] > 1:
+		print("[INFO] User " + start_acc + " was already visited before")
 		return # This account was visited before already
 
 	followers_count = None
@@ -317,21 +319,25 @@ if __name__ == "__main__":
 
 	signal.signal(signal.SIGINT, signal_handler)
 
-	acc = None
 	if len(argv) >= 2:
-		acc = argv[1]
-	else:
-		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
-		if len(records) == 0:
-			print("\033[31mNo starting account can be determined, please provide one\033[0m")
-			os._exit(0)
-		acc = records[0].value()
+		search(argv[1], db)
 
+	THREAD_COUNT = len(API_TOKS)
+	threads      = []
+	for _ in range(THREAD_COUNT):
+		threads.append(None)
+
+	query = "MATCH (u:User {visited: 0}) RETURN u.name LIMIT " + str(THREAD_COUNT)
 	while not close_process:
-		search(acc, db)
-		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
+		records, _, _ = db.execute_query(query)
 		if len(records) == 0:
 			break
-		acc = records[0].value()
+		for i in range(len(records)):
+			acc = records[i].value()
+			t = threading.Thread(target=search, args=(acc, db))
+			t.start()
+			threads[i] = t
+		for i in range(len(records)):
+			threads[i].join()
 
 	db.close()
