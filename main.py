@@ -132,6 +132,44 @@ def get_and_sync_list(db: Driver, endpoint: str, key: str, max: int, query: str,
 		records, _, _ = db.execute_query(query, **query_args)
 		assert(len(records) == 1)
 
+def get_forks(db: Driver, repo: str, forks_count: int):
+	forks = get_json_list(f"repos/{repo}/forks", lambda x: x["full_name"], forks_count)
+	for fork in forks:
+		records, _, _ = db.execute_query("""
+			MERGE (r:Repo {name: $rname})
+			ON CREATE SET r.visited=0
+			RETURN r
+		""", rname=fork)
+		assert(len(records) == 1)
+		r = records[0].value()
+		records, _, _ = db.execute_query("""
+			MATCH (r1:Repo {name: $r1name})
+			MATCH (r2:Repo {name: $r2name})
+			MERGE (r1)-[rel:FORKED_TO]->(r2)
+		""", r1name=repo, r2name=fork)
+		if r['visited'] == 0:
+			db.execute_query("""
+				MATCH (r:Repo {name: $rname})
+				MATCH (u:User {name: $uname})
+				MERGE (u)-[:OWNS]->(r)
+			""", rname=fork, uname=fork.split("/")[0])
+
+def get_contributors(db: Driver, repo: str):
+	contributors = get_json_list(f"repos/{repo}/contributors", lambda x: [x["login"], int(x["contributions"])])
+	total_contributions = 0
+	for x in contributors:
+		total_contributions += x[1]
+	for contributor in contributors:
+		records, _, _ = db.execute_query("""
+			MATCH (r:Repo {name: $rname})
+			MERGE (u:User {name: $uname})
+			ON CREATE SET u.visited = 0
+			MERGE (u)-[:CONTRIBUTED {weight: $w, contributions: $c}]->(r)
+			RETURN u
+		""", uname=contributor[0], rname=repo, w=1-(contributor[1]/total_contributions), c=contributor[1])
+		# The weight is the inverse of the percentage of the contributor's contribution relative to all contributions to this repo
+		assert(len(records) == 1)
+
 def search(start_acc: str, db: Driver):
 	records, _, _ = db.execute_query("""
 		MERGE (u:User {name: $uname})
@@ -158,78 +196,74 @@ def search(start_acc: str, db: Driver):
 		print("\033[33m[WARNING] Couldn't get data for user '" + start_acc + "'\033[0m")
 		return
 
-	get_and_sync_list(db, f"users/{start_acc}/followers", "login", followers_count, """
+	visited_repos = {}
+	threads       = []
+
+	t = threading.Thread(target=get_and_sync_list, args=(db, f"users/{start_acc}/followers", "login", followers_count, """
 		MATCH (u1:User {name: $uname})
 		MERGE (u2:User {name: $followername})
 		ON CREATE SET u2.visited = 0
 		MERGE (u1)<-[:FOLLOWS]-(u2)
 		RETURN u2
-	""", "followername", uname=start_acc)
+	""", "followername"), kwargs={"uname": start_acc})
+	t.start()
+	threads.append(t)
 
-	get_and_sync_list(db, f"users/{start_acc}/following", "login", following_count, """
+	t = threading.Thread(target=get_and_sync_list, args=(db, f"users/{start_acc}/following", "login", following_count, """
 		MATCH (u1:User {name: $uname})
 		MERGE (u2:User {name: $followeename})
 		ON CREATE SET u2.visited = 0
 		MERGE (u1)-[:FOLLOWS]->(u2)
 		RETURN u2
-	""", "followeename", uname=start_acc)
+	""", "followeename"), kwargs={"uname": start_acc})
+	t.start()
+	threads.append(t)
 
 	repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
 	for repo in repos:
-		records, _, _ = db.execute_query("""
-			MATCH (u:User {name: $uname})
-			MERGE (r:Repo {name: $rname})
-			ON CREATE SET r.visited=1
-			ON MATCH SET r.visited=r.visited+1
-			MERGE (u)-[:OWNS]->(r)
-			RETURN r
-		""", uname=start_acc, rname=repo)
-		assert(len(records) == 1)
-		r = records[0].value()
-		if r['visited'] <= 1:
-			forks = get_json_list(f"repos/{repo}/forks", lambda x: x["full_name"])
-			for fork in forks:
-				records, _, _ = db.execute_query("""
-					MERGE (r:Repo {name: $rname})
-					ON CREATE SET r.visited=0
-					RETURN r
-				""", rname=fork)
-				assert(len(records) == 1)
-				r = records[0].value()
-				records, _, _ = db.execute_query("""
-					MATCH (r1:Repo {name: $r1name})
-					MATCH (r2:Repo {name: $r2name})
-					MERGE (r1)-[rel:FORKED_TO]->(r2)
-				""", r1name=repo, r2name=fork)
-				if r['visited'] == 0:
-					db.execute_query("""
-						MATCH (r:Repo {name: $rname})
-						MATCH (u:User {name: $uname})
-						MERGE (u)-[:OWNS]->(r)
-					""", rname=fork, uname=fork.split("/")[0])
+		try:
+			r = get(f"https://api.github.com/repos/{repo}", headers=headers).json()
+			stargazers_count = int(r["stargazers_count"])
+			forks_count = int(r["forks_count"])
 
-			contributors = get_json_list(f"repos/{repo}/contributors", lambda x: [x["login"], int(x["contributions"])])
-			total_contributions = 0
-			for x in contributors:
-				total_contributions += x[1]
-			for contributor in contributors:
-				records, _, _ = db.execute_query("""
+			records, _, _ = db.execute_query("""
+				MATCH (u:User {name: $uname})
+				MERGE (r:Repo {name: $rname})
+				ON CREATE SET r.visited=0
+				ON MATCH SET r.visited=r.visited + toInteger(r.visited > 0)
+				MERGE (u)-[:OWNS]->(r)
+				RETURN r
+			""", uname=start_acc, rname=repo)
+			assert(len(records) == 1)
+			r = records[0].value()
+			# @Cleanup: I'm not sure if it should be possible for a repo to have been visited before if we didn't visit its user yet
+			# I do know, that I counted visits in previously buggy versions though, so as to correct those, I added the 'or True' for now
+			if r['visited'] <= 1 or True:
+				t = threading.Thread(target=get_forks, args=(db, repo, forks_count))
+				t.start()
+				threads.append(t)
+
+				t = threading.Thread(target=get_contributors, args=(db, repo))
+				t.start()
+				threads.append(t)
+
+				t = threading.Thread(target=get_and_sync_list, args=(db, f"repos/{repo}/stargazers", "login", stargazers_count, """
 					MATCH (r:Repo {name: $rname})
 					MERGE (u:User {name: $uname})
 					ON CREATE SET u.visited = 0
-					MERGE (u)-[:CONTRIBUTED {weight: $w, contributions: $c}]->(r)
+					MERGE (u)-[:STARRED]->(r)
 					RETURN u
-				""", uname=contributor[0], rname=repo, w=1-(contributor[1]/total_contributions), c=contributor[1])
-				# The weight is the inverse of the percentage of the contributor's contribution relative to all contributions to this repo
-				assert(len(records) == 1)
+				""", "uname"), kwargs={"rname": repo})
+				t.start()
+				threads.append(t)
+				visited_repos[len(threads) - 1] = repo
+		except:
+			print("\033[031m[ERROR] Failed to get data for " + repo + "\033[0m")
 
-			get_and_sync_list(db, f"repos/{repo}/stargazers", "login", None, """
-				MATCH (r:Repo {name: $rname})
-				MERGE (u:User {name: $uname})
-				ON CREATE SET u.visited = 0
-				MERGE (u)-[:STARRED]->(r)
-				RETURN u
-			""", "uname", rname=repo)
+	for i in range(len(threads)):
+		threads[i].join()
+		if i in visited_repos:
+			db.execute_query("""MATCH (r:Repo {name: $rname}) SET r.visited=1""", rname=visited_repos[i])
 	records, _, _ = db.execute_query("""
 		MATCH (u:User {name: $uname})
 		SET u.visited = 1
@@ -237,10 +271,10 @@ def search(start_acc: str, db: Driver):
 
 def signal_handler(sig, frame):
 	if not close_process:
-		print('[INFO] Ending process soon')
+		print('\033[033m[INFO] Ending process soon\033[0m')
 		globals()["close_process"] = True
 	else:
-		print('[INFO] Process was violently closed - bye')
+		print('\033[033m[INFO] Process was violently closed - bye\033[0m')
 		os._exit(0)
 
 if __name__ == "__main__":
