@@ -296,11 +296,13 @@ if __name__ == "__main__":
 		clean_db(db)
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:User) ON (x.name)")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Repo) ON (x.name)")
 
 	signal.signal(signal.SIGINT, signal_handler)
 
 	acc = None
-	if len(argv >= 2):
+	if len(argv) >= 2:
 		acc = argv[1]
 	else:
 		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
