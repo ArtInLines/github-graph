@@ -278,27 +278,37 @@ def signal_handler(sig, frame):
 		os._exit(0)
 
 if __name__ == "__main__":
-	if len(argv) != 2 and len(argv) != 3:
+	if len(argv) > 3:
 		print("\033[31mInvalid Amount of arguments\033[0m")
 		print("Usage:")
-		print(f"> python {argv[0]} <Account to start Search from> [-c]")
+		print(f"> python {argv[0]} [<Account to start Search from>] [-c]")
 		print("The optional '-c' flag cleans the database before starting the script")
 		print("")
-		print("Example:")
+		print("Examples:")
+		print(f"> python {argv[0]}")
 		print(f"> python {argv[0]} ArtInLines")
+		print(f"> python {argv[0]} ArtInLines -c")
 		os._exit(1)
-	start_acc = argv[1]
 
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
-	if len(argv) == 3 and argv[2].startswith("-c"):
+	if len(argv) >= 3 and argv[2].startswith("-c"):
 		clean_db(db)
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
 
 	signal.signal(signal.SIGINT, signal_handler)
 
-	acc = start_acc
+	acc = None
+	if len(argv >= 2):
+		acc = argv[1]
+	else:
+		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
+		if len(records) == 0:
+			print("\033[31mNo starting account can be determined, please provide one\033[0m")
+			os._exit(0)
+		acc = records[0].value()
+
 	while not close_process:
 		search(acc, db)
 		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
