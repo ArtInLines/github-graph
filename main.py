@@ -201,6 +201,7 @@ def search(start_acc: str, db: Driver):
 
 	followers_count = None
 	following_count = None
+	repos_count     = None
 	try:
 		user = get(f"https://api.github.com/users/{start_acc}").json()
 		db.execute_query("""
@@ -209,6 +210,7 @@ def search(start_acc: str, db: Driver):
 		""", uname=start_acc, avatar=user["avatar_url"])
 		followers_count = user["followers"]
 		following_count = user["following"]
+		repos_count     = user["public_repos"]
 		user = None
 	except:
 		print("\033[33m[WARNING] Couldn't get data for user '" + start_acc + "'\033[0m")
@@ -237,7 +239,7 @@ def search(start_acc: str, db: Driver):
 	t.start()
 	threads.append(t)
 
-	repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"])
+	repos = get_json_list(f"users/{start_acc}/repos", lambda x: x["full_name"], repos_count)
 	for repo in repos:
 		try:
 			r = get(f"https://api.github.com/repos/{repo}").json()
