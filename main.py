@@ -38,12 +38,12 @@ def get_headers(api_tok_idx: int) -> dict:
 		"Authorization": "Bearer " + API_TOKS[api_tok_idx],
 	}
 
-def get(url: str, **kwargs) -> requests.Response:
+def get(url: str, to_print: bool = PRINT_REQ_INFO, **kwargs) -> requests.Response:
 	api_tok_idx = get_min_timeout_idx()
 	cur_time = int(math.floor(time.time()))
 	if timeouts[api_tok_idx] > cur_time:
 		time.sleep(timeouts[api_tok_idx] - cur_time)
-	if PRINT_REQ_INFO:
+	if to_print:
 		print(f"[INFO] Making request with {api_tok_idx}. API-Token to {url}")
 	kwargs["headers"] = get_headers(api_tok_idx)
 	r = requests.get(url, **kwargs)
@@ -71,7 +71,7 @@ def get_json_list_threaded(url, payload, idx, arr, mapper):
 	try:
 		params = payload
 		params["page"] = idx
-		r = get(url, params=params)
+		r = get(url, False, params=params)
 		data = r.json()
 		if mapper == None:
 			for i in range(len(data)):
@@ -95,8 +95,6 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 		if req_amount > 1:
 			if PRINT_REQ_INFO:
 				print("[INFO] Threading " + str(req_amount) + " GET calls to " + url)
-			prev_print_req_info = PRINT_REQ_INFO
-			globals()["PRINT_REQ_INFO"] = False
 			for i in range(max_amount):
 				res.append(None)
 			threads = []
@@ -106,7 +104,6 @@ def get_json_list(endpoint: str, mapper = None, max_amount: int = None):
 				threads.append(t)
 			for t in threads:
 				t.join()
-			globals()["PRINT_REQ_INFO"] = prev_print_req_info
 		else:
 			max_amount = None
 	if max_amount == None:
@@ -197,6 +194,7 @@ def search(start_acc: str, db: Driver):
 	assert(len(records) == 1)
 	if records[0].value()['visited'] > 1:
 		print("[INFO] User " + start_acc + " was already visited before")
+		db.execute_query("""MATCH (u:User {name: $uname}) SET u.visited = -1""", uname=start_acc)
 		return # This account was visited before already
 
 	followers_count = None
@@ -321,25 +319,20 @@ if __name__ == "__main__":
 
 	signal.signal(signal.SIGINT, signal_handler)
 
+	acc = None
 	if len(argv) >= 2:
-		search(argv[1], db)
-
-	THREAD_COUNT = len(API_TOKS)
-	threads      = []
-	for _ in range(THREAD_COUNT):
-		threads.append(None)
-
-	query = "MATCH (u:User {visited: 0}) RETURN u.name LIMIT " + str(THREAD_COUNT)
+		acc = argv[1]
+	else:
+		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
+		if len(records) == 0:
+			print("\033[31mNo starting account can be determined, please provide one\033[0m")
+			os._exit(0)
+		acc = records[0].value()
 	while not close_process:
-		records, _, _ = db.execute_query(query)
+		search(acc, db)
+		records, _, _ = db.execute_query("""MATCH (u:User {visited: 0}) RETURN u.name LIMIT 1""")
 		if len(records) == 0:
 			break
-		for i in range(len(records)):
-			acc = records[i].value()
-			t = threading.Thread(target=search, args=(acc, db))
-			t.start()
-			threads[i] = t
-		for i in range(len(records)):
-			threads[i].join()
+		acc = records[0].value()
 
 	db.close()
