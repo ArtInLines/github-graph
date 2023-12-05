@@ -194,7 +194,6 @@ def search(start_acc: str, db: Driver):
 	assert(len(records) == 1)
 	if records[0].value()['visited'] > 1:
 		print("[INFO] User " + start_acc + " was already visited before")
-		db.execute_query("""MATCH (u:User {name: $uname}) SET u.visited = -1""", uname=start_acc)
 		return # This account was visited before already
 
 	followers_count = None
@@ -211,6 +210,7 @@ def search(start_acc: str, db: Driver):
 		repos_count     = user["public_repos"]
 		user = None
 	except:
+		db.execute_query("""MATCH (u:User {name: $uname}) SET u.visited = -1""", uname=start_acc)
 		print("\033[33m[WARNING] Couldn't get data for user '" + start_acc + "'\033[0m")
 		return
 
@@ -276,6 +276,7 @@ def search(start_acc: str, db: Driver):
 				threads.append(t)
 				visited_repos[len(threads) - 1] = repo
 		except:
+			db.execute_query("""MATCH (u:Repo {name: $rname}) SET u.visited = -1""", rname=repo)
 			print("\033[031m[ERROR] Failed to get data for " + repo + "\033[0m")
 
 	for i in range(len(threads)):
