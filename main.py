@@ -38,6 +38,12 @@ def get_headers(api_tok_idx: int) -> dict:
 		"Authorization": "Bearer " + API_TOKS[api_tok_idx],
 	}
 
+def is_rate_limited(res: requests.Response) -> bool:
+	try:
+		return res.status_code == 429 or (res.status_code == 403 and res.json()["message"].startswith("API rate limit exceeded"))
+	except:
+		return False
+
 def get(url: str, to_print: bool = PRINT_REQ_INFO, **kwargs) -> requests.Response:
 	api_tok_idx = get_min_timeout_idx()
 	cur_time = int(math.floor(time.time()))
@@ -53,7 +59,7 @@ def get(url: str, to_print: bool = PRINT_REQ_INFO, **kwargs) -> requests.Respons
 		return r
 	elif r.status_code == 404:
 		raise Exception(r)
-	elif r.status_code in 429:
+	elif is_rate_limited(r):
 		# Rate Limited
 		reset = r.headers["x-ratelimit-reset"]
 		cur_time = int(math.floor(time.time()))
@@ -208,7 +214,6 @@ def search(start_acc: str, db: Driver):
 		followers_count = user["followers"]
 		following_count = user["following"]
 		repos_count     = user["public_repos"]
-		user = None
 	except:
 		db.execute_query("""MATCH (u:User {name: $uname}) SET u.visited = -1""", uname=start_acc)
 		print("\033[33m[WARNING] Couldn't get data for user '" + start_acc + "'\033[0m")
