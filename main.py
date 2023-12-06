@@ -179,15 +179,31 @@ def get_contributors(db: Driver, repo: str):
 	for x in contributors:
 		total_contributions += x[1]
 	for contributor in contributors:
-		records, _, _ = db.execute_query("""
+		db.execute_query("""
 			MATCH (r:Repo {name: $rname})
 			MERGE (u:User {name: $uname})
-			ON CREATE SET u.visited = 0
-			MERGE (u)-[:CONTRIBUTED {weight: $w, contributions: $c}]->(r)
-			RETURN u
+				ON CREATE SET u.visited = 0
+			MERGE (u)-[x:CONTRIBUTED]->(r)
+			SET x.weight=$w, x.contributions=$c
 		""", uname=contributor[0], rname=repo, w=1-(contributor[1]/total_contributions), c=contributor[1])
-		# The weight is the inverse of the percentage of the contributor's contribution relative to all contributions to this repo
-		assert(len(records) == 1)
+
+def get_langs(db: Driver, repo: str):
+	langs = get_json_list(f"repos/{repo}/languages")
+	total_loc = 0
+	if isinstance(langs, list):
+		ls = {}
+		for l in langs:
+			ls[l] = 1
+		langs = ls
+	for _, loc in langs.items():
+		total_loc += loc
+	for lang, loc in langs.items():
+		db.execute_query("""
+			MATCH (r:Repo {name: $rname})
+			MERGE (l:Lang {name: $lname})
+			MERGE (r)-[x:WRITTEN_IN]->(l)
+			SET x.abs=$lines, x.rel=$perc
+		""", lname=lang, rname=repo, lines=loc, perc=loc/total_loc)
 
 def search(start_acc: str, db: Driver):
 	print("[INFO] Starting search for user " + start_acc)
@@ -270,6 +286,10 @@ def search(start_acc: str, db: Driver):
 				t.start()
 				threads.append(t)
 
+				t = threading.Thread(target=get_langs, args=(db, repo))
+				t.start()
+				threads.append(t)
+
 				t = threading.Thread(target=get_and_sync_list, args=(db, f"repos/{repo}/stargazers", "login", stargazers_count, """
 					MATCH (r:Repo {name: $rname})
 					MERGE (u:User {name: $uname})
@@ -301,27 +321,25 @@ def signal_handler(sig, frame):
 		print('\033[033m[INFO] Process was violently closed - bye\033[0m')
 		os._exit(0)
 
-if __name__ == "__main__":
-	if len(argv) > 3:
+def main():
+	if len(argv) > 2:
 		print("\033[31mInvalid Amount of arguments\033[0m")
 		print("Usage:")
-		print(f"> python {argv[0]} [<Account to start Search from>] [-c]")
-		print("The optional '-c' flag cleans the database before starting the script")
+		print(f"> python {argv[0]} [<Account to start Search from>]")
 		print("")
 		print("Examples:")
 		print(f"> python {argv[0]}")
 		print(f"> python {argv[0]} ArtInLines")
-		print(f"> python {argv[0]} ArtInLines -c")
 		os._exit(1)
 
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
-	if len(argv) >= 3 and argv[2].startswith("-c"):
-		clean_db(db)
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Lang) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:User) ON (x.name)")
 	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Repo) ON (x.name)")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Lang) ON (x.name)")
 
 	signal.signal(signal.SIGINT, signal_handler)
 
@@ -342,3 +360,29 @@ if __name__ == "__main__":
 		acc = records[0].value()
 
 	db.close()
+
+def fix_db():
+	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
+	db.verify_connectivity()
+	print("Connected to database")
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Lang) REQUIRE x.name IS UNIQUE")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:User) ON (x.name)")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Repo) ON (x.name)")
+	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Lang) ON (x.name)")
+	records, _, _ = db.execute_query("""
+		MATCH (r:Repo)
+		WHERE r.abs IS NULL
+		RETURN r.name
+	""")
+	print(f"Found {len(records)} repos to fix")
+	for rec in records:
+		rname = rec.value()
+		get_langs(db, rname)
+		if close_process:
+			break
+
+if __name__ == "__main__":
+	# main()
+	fix_db()

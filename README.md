@@ -67,6 +67,8 @@ We specify the following labels with their specific attributes for nodes:
 - Repo
   - name: string [this is the repo's full name which includes the owner account's username]
   - visited: int
+- Lang
+  - name: string [Name of the Language]
 
 We specify the following labels with their specific attributes for edges:
 
@@ -80,6 +82,11 @@ We specify the following labels with their specific attributes for edges:
   - (User) -> (Repo)
 - CONTRIBUTED
   - (User) -> (Repo)
+  -
+- WRITTEN_IN
+  - (Repo) -> (Lang)
+  - abs: int [Lines of Code in the Repo that were written in the Language]
+  - rel: float [Percentage (0 to 1) of code in the Repo that were written in the Language]
 
 Lastly, we shall give some examples to illustrate this Data Model:
 
