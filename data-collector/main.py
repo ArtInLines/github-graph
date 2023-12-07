@@ -4,19 +4,19 @@ import threading
 from neo4j import GraphDatabase, Driver
 import requests
 import json
-import dotenv
+from dotenv import dotenv_values
 import os
 import time
 import math
 from datetime import datetime
 from sys import argv
-dotenv.load_dotenv()
+env = dotenv_values("../.env")
 
 PRINT_REQ_INFO = True
 close_process = False
 
 # API_TOKS and timeouts are two parallel arrays
-API_TOKS = os.getenv("API_TOKEN").split(",")
+API_TOKS = env["API_TOKEN"].split(",")
 timeouts = []
 for _ in range(len(API_TOKS)):
 	timeouts.append(0)
@@ -335,7 +335,7 @@ def main():
 		print(f"> python3 {argv[0]} -fix")
 		os._exit(1)
 
-	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
+	db = GraphDatabase.driver(env["DB_URI"], auth=(env["DB_USER"], env["DB_PASS"]))
 	db.verify_connectivity()
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
 	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
@@ -363,7 +363,7 @@ def main():
 	db.close()
 
 def fix_db():
-	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
+	db = GraphDatabase.driver(env["DB_URI"], auth=(env["DB_USER"], env["DB_PASS"]))
 	db.verify_connectivity()
 	print("Connected to database")
 

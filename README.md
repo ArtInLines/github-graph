@@ -2,34 +2,27 @@
 
 This project was created for uni course "Big Data".
 
+The idea is to create a graph of all Github users and their (public) repositories. The edges in said graph would represent relations between these entities (for example a "a-follows-b" or "a-forked-repository-owned-by-b" relationship). The goal is to collect and store the data for this network graph and then allow the user to query certain statistics about this graph via a web-interface. We specifically, want to show the following information:
+- The shortest path between two users
+- The [n-clique](https://de.wikipedia.org/wiki/Cliquenanalyse#n-Clique) of a user
+
 ## Disclaimer
 
 This project is still a Work-in-Progress. This means, not everything might work and the documentation might quickly become outdated.
 
-## Setup
+## Architecture
 
-To run the project locally, you need to have a [neo4j](https://neo4j.com/) database and [python](https://www.python.org/) installed.
+This project contains several independent parts:
 
-Next, you need to install all required python dependencies. You can optionally also setup and activate a virtual environment first. In any case, you should run:
+- Data Collector
+- Server
+- Frontend
 
-```console
-> python -m pip install -r requirements.txt
-```
+The Data-Collector deals with getting all the required data from the Github-API and stores the data in a remote Neo4j database.
 
-Next, you need to setup the environment variables. To do so, create a file named `.env` in the root folder of this project. You need to provide the following variables in that file:
+The Server connects to the same Neo4j database and offers a REST-API for accessing relevant data via HTTP.
 
-```env
-API_TOKEN=<Your Github API Token>
-DB_URI=<Your neo4j's URI>
-DB_USER=<Your Username for accessing the neo4j Database>
-DB_PASS=<Your Password for accessing the neo4j Database>
-```
-
-With this setup complete, you can finally run the program then:
-
-```console
-> python main.py
-```
+The Frontend is a website, that visualizes the above mentioned statistics dynamically.
 
 ## Data Model
 
