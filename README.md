@@ -123,6 +123,11 @@ Start- and end-node must be specified with the `start` and `end` query parameter
 The default-assumed type for both, start- and end-node is `User`, but can be altered with the parameter `typeStart` and `typeEnd` respectively.
 Furthermore the parameters `minDist`, `maxDist` and `relationShipConstraints` exist and do the same as in `/getRelatives`, except for the default value for `maxDist`, which here is 10.
 
+### /nodeStats
+
+the `nodeStats` endpoint returns statistics about a single node, i.e. the amount and types of relationship that node has with other nodes.
+The parameters are `type`, which can be either `User` or `Repo` (Default is `User`) and `node` which must be used to specify the node of interest.
+
 ### /stats
 
 offers stats about the database.

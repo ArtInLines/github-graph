@@ -9,10 +9,6 @@ const port = 3000
 const dbDriver = await dbBase.getDB()
 app.use(logger.logger);
 
-app.get('/getUserDistance', (req, res) => {
-
-  res.send('Hello World!')
-})
 
 app.get('/getDistance', (req, res) => {
     let relConstraint = '';
@@ -39,7 +35,7 @@ app.get('/getDistance', (req, res) => {
             RETURN path`
         console.log(txString)
         const path = await tx.run(txString);
-        res.send(path)
+        res.send(path.records)
     }).then(() => session.close());
 })
 
@@ -49,7 +45,6 @@ app.get('/getRelatives', (req, res) => {
     let minDist = (req.query['minDist'] != undefined) ? escapeNumber(req.query['minDist']) : 1
     let maxDist = (req.query['maxDist'] != undefined) ? escapeNumber(req.query['maxDist']) : 1
     let type = ''
-    console.log(req.query)
     type = req.query['type'] == undefined ? 'User' : req.query['type'];
     if ( req.query['start'] == undefined || !(type=='User' || type=='Repo')){
         res.status(400)
@@ -71,9 +66,20 @@ app.get('/getRelatives', (req, res) => {
 
 })
 
-// gets all nodes connect to a repo up to a certain distance
-app.get('/getRepoRelatives', (req, res) => {
-    
+app.get('/nodeStats', (req, res) => {
+    let type = req.query['type'] == undefined ? 'User' : req.query['type'];
+    if(req.query['node'] == undefined || !(type =='User' || type=='Repo')){
+        res.status(400)
+        res.send("invalid or missing parameter detected");
+    }
+    let session = dbDriver.session()
+    session.executeRead (async tx => {
+        const txString = `MATCH (p:${type}{name:'${escapeUser(req.query['node'])}'})-[r]-() RETURN TYPE(r) as type, COUNT(r) as amount`
+        console.log("executing query: " + txString)
+        const result = await tx.run(txString);
+        res.send(result.records)
+    })
+    .then(() => {session.close()})
 })
 
 // gets general facts about the database
