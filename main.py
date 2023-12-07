@@ -195,6 +195,8 @@ def get_langs(db: Driver, repo: str):
 		for l in langs:
 			ls[l] = 1
 		langs = ls
+	if len(langs) == 0:
+		langs['Other'] = 1
 	for _, loc in langs.items():
 		total_loc += loc
 	for lang, loc in langs.items():
@@ -325,11 +327,12 @@ def main():
 	if len(argv) > 2:
 		print("\033[31mInvalid Amount of arguments\033[0m")
 		print("Usage:")
-		print(f"> python {argv[0]} [<Account to start Search from>]")
+		print(f"> python3 {argv[0]} [<Account to start Search from> | -fix]")
 		print("")
 		print("Examples:")
-		print(f"> python {argv[0]}")
-		print(f"> python {argv[0]} ArtInLines")
+		print(f"> python3 {argv[0]}")
+		print(f"> python3 {argv[0]} ArtInLines")
+		print(f"> python3 {argv[0]} -fix")
 		os._exit(1)
 
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
@@ -340,8 +343,6 @@ def main():
 	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:User) ON (x.name)")
 	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Repo) ON (x.name)")
 	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Lang) ON (x.name)")
-
-	signal.signal(signal.SIGINT, signal_handler)
 
 	acc = None
 	if len(argv) >= 2:
@@ -365,24 +366,22 @@ def fix_db():
 	db = GraphDatabase.driver(os.getenv("DB_URI"), auth=(os.getenv("DB_USER"), os.getenv("DB_PASS")))
 	db.verify_connectivity()
 	print("Connected to database")
-	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:User) REQUIRE x.name IS UNIQUE")
-	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Repo) REQUIRE x.name IS UNIQUE")
-	db.execute_query("CREATE CONSTRAINT IF NOT EXISTS FOR (x:Lang) REQUIRE x.name IS UNIQUE")
-	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:User) ON (x.name)")
-	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Repo) ON (x.name)")
-	db.execute_query("CREATE INDEX IF NOT EXISTS FOR (x:Lang) ON (x.name)")
+
 	records, _, _ = db.execute_query("""
 		MATCH (r:Repo)
-		WHERE r.abs IS NULL
+		WHERE NOT EXISTS ((r)-[:WRITTEN_IN]->(:Lang))
 		RETURN r.name
 	""")
 	print(f"Found {len(records)} repos to fix")
 	for rec in records:
-		rname = rec.value()
-		get_langs(db, rname)
 		if close_process:
 			break
+		rname = rec.value()
+		get_langs(db, rname)
 
 if __name__ == "__main__":
-	# main()
-	fix_db()
+	signal.signal(signal.SIGINT, signal_handler)
+	if len(argv) == 2 and argv[1] == '-fix':
+		fix_db()
+	else:
+		main()
