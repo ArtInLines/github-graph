@@ -3,6 +3,8 @@ import express from 'express';
 import dbBase from './src/getDB.js'
 import logger from './src/logger.js'
 import {escapeUser, escapeNumber, escapeRelationShipConstraints} from './src/escapeInputs.js'
+import { GitNode } from './src/model/gitNode.mjs';
+import { GitEdge } from './src/model/gitEdge.mjs';
 const app = express()
 const port = 3000
 
@@ -57,10 +59,22 @@ app.get('/getRelatives', (req, res) => {
     let session = dbDriver.session();
     session.executeRead( async tx => {
         // type does not need to be escaped, because it can only be User or Repo (checked above)
-        const txString = `MATCH (source:${type}{name: '${escapeUser(req.query['start'])}'})-[rel${relConstraint}*${minDist}..${maxDist}]-(dest) RETURN source, dest, rel`
-        console.log("txString: " + txString)
-        const nodes = await tx.run(txString);
-        res.send(nodes.records);
+        const txString = `MATCH (source:${type}{name: '${escapeUser(req.query['start'])}'})-[rel${relConstraint}*${minDist}..${maxDist}]-(dest) RETURN collect(distinct source), collect(distinct dest), collect(distinct rel)`
+        const result = await tx.run(txString);
+        const nodes = [];
+        const rel = [];
+        result.records[0]._fields[0].forEach(element => {
+            nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
+        });
+        result.records[0]._fields[1].forEach(element => {
+            nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
+        })
+        result.records[0]._fields[2].forEach(element => {
+            element.forEach( innerElement => {
+                rel.push(new GitEdge(innerElement.start.low , innerElement.end.low, innerElement.identity.low, innerElement.type, innerElement.properties.weight ? innerElement.properties.weight : -1))
+            })
+        })
+        res.send({nodes, rel});
     })
     .then(() => session.close()) 
 
