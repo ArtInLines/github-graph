@@ -1,4 +1,3 @@
-
 export class GitEdge {
   source: string;
   dest: string;
