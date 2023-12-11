@@ -1,14 +1,15 @@
-
 import express from 'express';
 import dbBase from './src/getDB.js'
 import logger from './src/logger.js'
 import {escapeUser, escapeNumber, escapeRelationShipConstraints} from './src/escapeInputs.js'
 import { GitNode } from './src/model/gitNode.mjs';
 import { GitEdge } from './src/model/gitEdge.mjs';
+import cors from 'cors';
 const app = express()
 const port = 3000
 
 const dbDriver = await dbBase.getDB()
+app.use(cors());
 app.use(logger.logger);
 
 
