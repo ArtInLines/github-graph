@@ -1,4 +1,3 @@
-<!-- This is only the demo network to show that all necessary dependencies work -->
 <ngx-graph
   class="chart-container"
   layout="d3ForceDirected"
@@ -6,5 +5,36 @@
   [showMiniMap]="true"
   [links]=edges
   [nodes]=nodes
->
+  xmlns:svg="http://www.w3.org/1999/XSL/Transform">
+
+  <ng-template #defsTemplate>
+    <svg:marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+      <svg:path d="M0,-5L10,0L0,5" class="arrow-head" />
+    </svg:marker>
+  </ng-template>
+  <ng-template #nodeTemplate let-node>
+    <svg:g class="node">
+      <svg:circle
+        [attr.r]="node.dimension.width/2"
+        [attr.fill]="node.data.color"></svg:circle>
+      <svg:text alignment-baseline="left" [attr.x]="-node.dimension.width" [attr.y]="0">
+        {{node.label}}
+      </svg:text>
+    </svg:g>
+  </ng-template>
+  <ng-template #linkTemplate let-link>
+    <svg:g class="edge">
+      <svg:path class="line" stroke-width="2" marker-end="url(#arrow)"></svg:path>
+      <svg:text class="edge-label" text-anchor="middle">
+        <textPath
+          class="text-path"
+          [attr.href]="'#' + link.id"
+          [style.dominant-baseline]="link.dominantBaseline"
+          startOffset="50%"
+        >
+          {{link.label}}
+        </textPath>
+      </svg:text>
+    </svg:g>
+  </ng-template>
 </ngx-graph>
