@@ -20,7 +20,7 @@ export class NetworkComponent implements OnInit {
   }
 
   async getData() {
-    let res: GitResponse = await this.networkService.getNetwork(0, 1, "User", "ArtInLines");
+    let res: GitResponse = await this.networkService.getNetwork(1, 1, "User", "ArtInLines");
     console.log(res);
     this.nodes = res.nodes.map( gitNode => {
       return new GraphNode(gitNode.id, gitNode.name);
