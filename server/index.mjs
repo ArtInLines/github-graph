@@ -60,17 +60,21 @@ app.get('/getRelatives', (req, res) => {
     let session = dbDriver.session();
     session.executeRead( async tx => {
         // type does not need to be escaped, because it can only be User or Repo (checked above)
-        const txString = `MATCH (source:${type}{name: '${escapeUser(req.query['start'])}'})-[rel${relConstraint}*${minDist}..${maxDist}]-(dest) RETURN collect(distinct source), collect(distinct dest), collect(distinct rel)`
+        const txString = `MATCH (source:${type}{name: '${escapeUser(req.query['start'])}'})-[rela${relConstraint}*${minDist}..${maxDist}]-(dest)
+         WITH collect(DISTINCT rela) AS collectedRels, collect(DISTINCT source) + collect(DISTINCT dest) AS collectedNodes 
+         UNWIND collectedNodes AS flatNodes
+         RETURN collect(DISTINCT flatNodes), collectedRels`
+        console.log(txString)
         const result = await tx.run(txString);
         const nodes = [];
         const rel = [];
         result.records[0]._fields[0].forEach(element => {
             nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
         });
+        //result.records[0]._fields[1].forEach(element => {
+        //    nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
+        //})
         result.records[0]._fields[1].forEach(element => {
-            nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
-        })
-        result.records[0]._fields[2].forEach(element => {
             element.forEach( innerElement => {
                 rel.push(new GitEdge(innerElement.start.low , innerElement.end.low, innerElement.identity.low, innerElement.type, innerElement.properties.weight ? innerElement.properties.weight : -1))
             })
@@ -107,10 +111,26 @@ app.get('/stats', (req, res) =>{
     }).then(() => session.close())
     
 })
+/*
+MATCH (source:User{name: 'ArtInLines'})-[rela*1..2]-(dest)
+WITH collect(distinct rela) as rela, collect(distinct source) + collect(distinct dest) 
+AS collectedNodes UNWIND collectedNodes AS flatNodes
+RETURN collect(distinct flatNodes), rela
+*/
 
 
 app.listen(port, () => {
     console.log(`listening on port ${port}`)
 })
 
+process.on('SIGINT', () => {
+    console.log("sigint");
+    dbDriver.close();
+    process.exit();
+})
+
+process.on('SIGTERM', () => {
+    dbDriver.close();
+    process.exit();
+})
 
