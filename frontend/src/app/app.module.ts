@@ -5,16 +5,20 @@ import { AppComponent } from './app.component';
 import {NgxGraphModule} from "@swimlane/ngx-graph";
 import { NetworkComponent } from './network/network.component';
 import { HeaderComponent } from './header/header.component';
+import { RequestComponent } from './request/request.component';
+import {FormsModule} from "@angular/forms";
 
 @NgModule({
   declarations: [
     AppComponent,
     NetworkComponent,
-    HeaderComponent
+    HeaderComponent,
+    RequestComponent
   ],
   imports: [
     BrowserModule,
-    NgxGraphModule
+    NgxGraphModule,
+    FormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

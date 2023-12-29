@@ -15,13 +15,13 @@ export class NetworkComponent implements OnInit {
   nodes: Node[] = new Array<Node>();
   edges: Edge[] = new Array<Edge>();
   draggedNode: Node | undefined;
-  constructor(private networkService: NetworkService) { }
+  constructor() { }
 
   ngOnInit() {
-    this.getData();
+    this.getMockData();
   }
 
-  async getData() {
+  /*async getData() {
     let res: GitResponse = await this.networkService.getNetwork(1, 1, "User", "ArtInLines");
     console.log(res);
     this.nodes = res.nodes.map( gitNode => {
@@ -30,7 +30,7 @@ export class NetworkComponent implements OnInit {
     this.edges = res.rel.map( gitEdge => {
       return new GraphEdge(gitEdge.id, gitEdge.label, gitEdge.source, gitEdge.dest);
     });
-  }
+  }*/
 
   // Method to toggle label visibility on click
   toggleLabel(node: GraphNode) {
