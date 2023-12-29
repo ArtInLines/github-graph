@@ -3,6 +3,7 @@
   layout= "d3ForceDirected"
   [view]="[1000, 900]"
   [showMiniMap]="true"
+  [center$]="center$"
   [links]=edges
   [nodes]=nodes
   xmlns:svg="http://www.w3.org/1999/XSL/Transform">
@@ -18,7 +19,7 @@
         <!-- Circle representing node -->
       <svg:circle
         [attr.r]="node.dimension.width/2"
-        [attr.fill]="node.data.color"></svg:circle>
+        [attr.fill]="getEdgeColor(node.data.link.label)"></svg:circle>
         <!-- Node Label -->
         <svg:text *ngIf="node.showFullLabel" class="node-label" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
           {{ node.label }}

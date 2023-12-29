@@ -4,6 +4,7 @@ import {Node, Edge, Layout, Graph} from "@swimlane/ngx-graph";
 import {GitResponse} from "../model/gitResponse";
 import {GraphNode} from "../model/graphNode";
 import {GraphEdge} from "../model/graphEdge";
+import {Subject} from "rxjs";
 
 
 @Component({
@@ -21,6 +22,21 @@ export class NetworkComponent implements OnInit {
     this.getMockData();
   }
 
+  center$: Subject<boolean> = new Subject();
+  centerGraph() {
+    this.center$.next(true)
+  }
+
+  getEdgeColor(edgeLabel: string): string {
+    // Define a mapping of edge labels to colors
+    const colorMap: { [key: string]: string } = {
+      'Follows': 'red',
+      'Owns': 'blue',
+      'Contributed': 'purple'
+    };
+    return colorMap[edgeLabel] || 'gray'; // Fallback color if label not found
+  }
+
   /*async getData() {
     let res: GitResponse = await this.networkService.getNetwork(1, 1, "User", "ArtInLines");
     console.log(res);
@@ -34,7 +50,7 @@ export class NetworkComponent implements OnInit {
 
   // Method to toggle label visibility on click
   toggleLabel(node: GraphNode) {
-    node.showFullLabel = !node.showFullLabel;
+    node.showFullLabel = true;
   }
 
   // Method to handle node dragging
@@ -47,9 +63,14 @@ export class NetworkComponent implements OnInit {
       // Add event listeners to the document for mousemove and mouseup
       document.addEventListener('mousemove', this.nodeDragHandler);
       document.addEventListener('mouseup', this.nodeReleaseHandler);
+      document.addEventListener('mousemove', this.onMouseMove);
     }
   }
-
+  onMouseUp = () => {
+    // Remove event listeners for mousemove and mouseup
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mouseup', this.onMouseUp);
+  };
   onNodeMouseUp(event: MouseEvent) {
     if (this.draggedNode !== undefined) {
       // Remove event listeners for mousemove and mouseup
@@ -59,12 +80,19 @@ export class NetworkComponent implements OnInit {
       this.draggedNode = undefined;
     }
   }
+
 // Function to update node position during dragging
   updateNodePosition(event: MouseEvent) {
+    if (this.draggedNode && this.draggedNode.position) {
+      this.draggedNode.position.x = event.clientX;
+      this.draggedNode.position.y = event.clientY;
+  }}
+
+  onMouseMove = (event: MouseEvent) => {
     if (this.draggedNode) {
-      // Update node position logic here
+      this.updateNodePosition(event);
     }
-  }
+  };
 
   // Drag handler function to track node dragging
   nodeDragHandler = (event: MouseEvent) => {

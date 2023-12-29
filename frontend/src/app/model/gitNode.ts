@@ -4,6 +4,7 @@ export class GitNode {
   label: string;
   id: string;
 
+
   constructor(name: string, avatar: string = "", type: string, id: string) {
     this.name = name;
     this.avatar = avatar;
