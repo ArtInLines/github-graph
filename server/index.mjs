@@ -1,4 +1,7 @@
-import express from 'express';
+import dotenv from 'dotenv'
+dotenv.config({ path: "../.env" });
+console.log(process.env)
+import express from'express';
 import dbBase from './src/getDB.js'
 import logger from './src/logger.js'
 import {escapeUser, escapeNumber, escapeRelationShipConstraints} from './src/escapeInputs.js'

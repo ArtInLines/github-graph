@@ -1,8 +1,9 @@
 <ngx-graph
   class="chart-container"
-  layout="d3ForceDirected"
-  [view]="[800, 600]"
+  layout= "d3ForceDirected"
+  [view]="[1000, 900]"
   [showMiniMap]="true"
+  [center$]="center$"
   [links]=edges
   [nodes]=nodes
   xmlns:svg="http://www.w3.org/1999/XSL/Transform">
@@ -14,14 +15,24 @@
   </ng-template>
   <ng-template #nodeTemplate let-node>
     <svg:g class="node">
+      <svg:g class="node" (mousedown)="onNodeMouseDown($event, node)" (mouseup)="onNodeMouseUp($event)">
+        <!-- Circle representing node -->
       <svg:circle
         [attr.r]="node.dimension.width/2"
-        [attr.fill]="node.data.color"></svg:circle>
-      <svg:text alignment-baseline="left" [attr.x]="-node.dimension.width" [attr.y]="0">
-        {{node.label}}
-      </svg:text>
+        [attr.fill]="getEdgeColor(node.data.link.label)"></svg:circle>
+        <!-- Node Label -->
+        <svg:text *ngIf="node.showFullLabel" class="node-label" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
+          {{ node.label }}
+        </svg:text>
+        <!-- Node Label on Click -->
+        <svg:text *ngIf="!node.showFullLabel" class="node-label-click" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle" (click)="toggleLabel(node)">
+          {{node.label.charAt(0)}}
+        </svg:text>
+
+      </svg:g>
     </svg:g>
   </ng-template>
+
   <ng-template #linkTemplate let-link>
     <svg:g class="edge">
       <svg:path class="line" stroke-width="2" marker-end="url(#arrow)"></svg:path>
@@ -38,3 +49,4 @@
     </svg:g>
   </ng-template>
 </ngx-graph>
+
