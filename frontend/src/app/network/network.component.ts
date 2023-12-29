@@ -1,9 +1,6 @@
-import {Component, OnInit} from '@angular/core';
-import {NetworkService} from "../network.service";
-import {Node, Edge, Layout, Graph} from "@swimlane/ngx-graph";
-import {GitResponse} from "../model/gitResponse";
+import {Component, Input} from '@angular/core';
+import {Node, Edge} from "@swimlane/ngx-graph";
 import {GraphNode} from "../model/graphNode";
-import {GraphEdge} from "../model/graphEdge";
 import {Subject} from "rxjs";
 
 
@@ -12,15 +9,12 @@ import {Subject} from "rxjs";
   templateUrl: './network.component.html',
   styleUrls: ['./network.component.css']
 })
-export class NetworkComponent implements OnInit {
-  nodes: Node[] = new Array<Node>();
-  edges: Edge[] = new Array<Edge>();
+export class NetworkComponent {
+  @Input() nodes: Node[] = new Array<Node>();
+  @Input() edges: Edge[] = new Array<Edge>();
+  @Input() path_nodes: Node[] = new Array<Node>();
+  @Input() path_edges: Edge[] = new Array<Edge>();
   draggedNode: Node | undefined;
-  constructor() { }
-
-  ngOnInit() {
-    this.getMockData();
-  }
 
   center$: Subject<boolean> = new Subject();
   centerGraph() {
@@ -104,19 +98,7 @@ export class NetworkComponent implements OnInit {
     this.onNodeMouseUp(event);
   };
 
-  getMockData() {
-    this.nodes = [
-      new GraphNode('a', 'anton'),
-      new GraphNode('b', 'beta'),
-    ];
-
-    this.edges = [
-      new GraphEdge('0', 'l0', 'a', 'b')
-    ];
-
-  }
-
-  highlightPath(nodes: GraphNode[], edges: GraphEdge[]): void {
+  highlightPath(): void {
     //TODO: write code that highlights all edges and nodes from input in existing graph
   }
 }
