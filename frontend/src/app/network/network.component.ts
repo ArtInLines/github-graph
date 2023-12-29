@@ -78,8 +78,8 @@ export class NetworkComponent implements OnInit {
 
   getMockData() {
     this.nodes = [
-      new GraphNode('a', 'a'),
-      new GraphNode('b', 'b'),
+      new GraphNode('a', 'anton'),
+      new GraphNode('b', 'beta'),
     ];
 
     this.edges = [
@@ -88,4 +88,7 @@ export class NetworkComponent implements OnInit {
 
   }
 
+  highlightPath(nodes: GraphNode[], edges: GraphEdge[]): void {
+    //TODO: write code that highlights all edges and nodes from input in existing graph
+  }
 }
