@@ -38,7 +38,20 @@ app.get('/getDistance', (req, res) => {
             RETURN path`
         console.log(txString)
         const path = await tx.run(txString);
-        res.send(path.records)
+        let segmentNodes = []
+        let segmentEdges = []
+        path.records[0]._fields[0].segments.forEach(seg => {
+            if(segmentNodes.filter(el => el.id == seg.start.identity.low).length == 0){
+                segmentNodes.push(new GitNode(seg.start.properties.name, seg.start.properties.avatar ? seg.start.properties.avatar : "", seg.start.labels[0], seg.start.identity.low))
+            }
+            if(segmentEdges.filter(el => el.id == seg.relationship.identity.low).length == 0){
+                segmentEdges.push(new GitEdge(seg.relationship.start.low, seg.relationship.end.low, seg.relationship.identity.low, seg.relationship.type, seg.relationship.weight ?seg.relationship.weight : -1))
+            }
+            if(segmentNodes.filter(el => el.id == seg.end.identity.low).length == 0){
+                segmentNodes.push(new GitNode(seg.end.properties.name, seg.end.properties.avatar?seg.end.properties.avatar : "", seg.end.labels[0], seg.end.identity.low))
+            }
+        })
+        res.send({segmentEdges, segmentNodes})
     }).then(() => session.close());
 })
 
