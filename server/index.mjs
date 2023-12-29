@@ -1,6 +1,5 @@
 import dotenv from 'dotenv'
 dotenv.config({ path: "../.env" });
-console.log(process.env)
 import express from'express';
 import dbBase from './src/getDB.js'
 import logger from './src/logger.js'
@@ -43,6 +42,10 @@ app.get('/getDistance', (req, res) => {
         const path = await tx.run(txString);
         let segmentNodes = []
         let segmentEdges = []
+        if(path.records.length == 0){
+            res.send("(probably) unknown nodes")
+            return;
+        }
         path.records[0]._fields[0].segments.forEach(seg => {
             if(segmentNodes.filter(el => el.id == seg.start.identity.low).length == 0){
                 segmentNodes.push(new GitNode(seg.start.properties.name, seg.start.properties.avatar ? seg.start.properties.avatar : "", seg.start.labels[0], seg.start.identity.low))
@@ -84,6 +87,10 @@ app.get('/getRelatives', (req, res) => {
         const result = await tx.run(txString);
         const nodes = [];
         const rel = [];
+        if(result.records.length == 0){
+            res.send("(probably) unknown nodes")
+            return;
+        }
         result.records[0]._fields[0].forEach(element => {
             nodes.push(new GitNode(element.properties.name, element.properties.avatar ? element.properties.avatar : "", element.labels[0], element.identity.low))
         });
