@@ -5,7 +5,7 @@ import {PathResponse} from "./model/pathResponse";
   providedIn: 'root'
 })
 export class PathService {
-  url: string = "http://localhost:3000";
+  url: string = "http://[2001:7c0:2320:2:f816:3eff:fe6a:d6af]:3000";
   constructor() { }
 
   async getShortestPath(startNode: string, destNode: string, startType: string, destType: string): Promise<PathResponse> {

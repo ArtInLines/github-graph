@@ -5,7 +5,7 @@ import {GitResponse} from "./model/gitResponse";
   providedIn: 'root'
 })
 export class NetworkService {
-  url: string = "http://localhost:3000";
+  url: string = "http://[2001:7c0:2320:2:f816:3eff:fe6a:d6af]:3000";
   constructor() { }
 
   async getNetwork(minDist: number, maxDist: number, type: string, start: string): Promise<GitResponse> {
