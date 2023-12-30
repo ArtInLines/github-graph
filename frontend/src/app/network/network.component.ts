@@ -31,17 +31,6 @@ export class NetworkComponent {
     return colorMap[edgeLabel] || 'gray'; // Fallback color if label not found
   }*/
 
-  /*async getData() {
-    let res: GitResponse = await this.networkService.getNetwork(1, 1, "User", "ArtInLines");
-    console.log(res);
-    this.nodes = res.nodes.map( gitNode => {
-      return new GraphNode(gitNode.id, gitNode.name);
-    });
-    this.edges = res.rel.map( gitEdge => {
-      return new GraphEdge(gitEdge.id, gitEdge.label, gitEdge.source, gitEdge.dest);
-    });
-  }*/
-
   // Method to toggle label visibility on click
   toggleLabel(node: GraphNode) {
     node.showFullLabel = !node.showFullLabel;

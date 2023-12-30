@@ -4,6 +4,9 @@ import {GitResponse} from "../model/gitResponse";
 import {GraphNode} from "../model/graphNode";
 import {GraphEdge} from "../model/graphEdge";
 import {PathService} from "../path.service";
+import {GitNode} from "../model/gitNode";
+import {GitEdge} from "../model/gitEdge";
+import {PathResponse} from "../model/pathResponse";
 
 @Component({
   selector: 'app-request',
@@ -39,13 +42,13 @@ export class RequestComponent implements OnInit{
   }
 
   async getShortestPath(): Promise<void> {
-    let res: GitResponse = await this.pathService.getShortestPath(this.root_name, this.dest_name, this.root_type, this.dest_type);
+    let res: PathResponse = await this.pathService.getShortestPath(this.root_name, this.dest_name, this.root_type, this.dest_type);
     console.log('Received path response from server');
     console.log(res);
-    this.path_nodes = res.nodes.map(gitNode => {
+    this.graph_nodes = res.segmentNodes.map((gitNode: GitNode) => {
       return new GraphNode(gitNode.id, gitNode.name, gitNode.label);
     });
-    this.path_edges = res.rel.map(gitEdge => {
+    this.graph_edges = res.segmentEdges.map((gitEdge: GitEdge) => {
       return new GraphEdge(gitEdge.id, gitEdge.label, gitEdge.source, gitEdge.dest);
     });
   }
