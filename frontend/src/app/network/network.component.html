@@ -18,8 +18,14 @@
       <svg:g class="node" (mousedown)="onNodeMouseDown($event, node)" (mouseup)="onNodeMouseUp($event)">
         <!-- Circle representing node -->
       <svg:circle
+        *ngIf="node.type === 'User'"
         [attr.r]="node.dimension.width/2"
         [attr.fill]="node.data.color"></svg:circle>
+      <svg:rect
+        *ngIf="node.type === 'Repo'"
+        class="repository-node"
+        width="40" height="20"
+        [attr.fill]="node.data.color"></svg:rect>
         <!-- Node Label -->
         <svg:text *ngIf="node.showFullLabel" class="node-label" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
           {{ node.label }}
@@ -28,6 +34,9 @@
         <svg:text *ngIf="!node.showFullLabel" class="node-label-click" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle" (click)="toggleLabel(node)">
           {{node.label.charAt(0)}}
         </svg:text>
+       <!-- <svg:text class="node-avatar" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
+          {{node.type}}
+        </svg:text> -->
 
       </svg:g>
     </svg:g>

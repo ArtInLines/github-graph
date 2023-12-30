@@ -14,14 +14,14 @@ export class NetworkComponent {
   @Input() edges: Edge[] = new Array<Edge>();
   @Input() path_nodes: Node[] = new Array<Node>();
   @Input() path_edges: Edge[] = new Array<Edge>();
-  draggedNode: Node | undefined;
+  draggedNode: GraphNode | undefined;
 
   center$: Subject<boolean> = new Subject();
   centerGraph() {
     this.center$.next(true)
   }
 
-  getEdgeColor(edgeLabel: string): string {
+  /*getEdgeColor(edgeLabel: string): string {
     // Define a mapping of edge labels to colors
     const colorMap: { [key: string]: string } = {
       'Follows': 'red',
@@ -29,7 +29,7 @@ export class NetworkComponent {
       'Contributed': 'purple'
     };
     return colorMap[edgeLabel] || 'gray'; // Fallback color if label not found
-  }
+  }*/
 
   /*async getData() {
     let res: GitResponse = await this.networkService.getNetwork(1, 1, "User", "ArtInLines");
@@ -44,7 +44,7 @@ export class NetworkComponent {
 
   // Method to toggle label visibility on click
   toggleLabel(node: GraphNode) {
-    node.showFullLabel = true;
+    node.showFullLabel = !node.showFullLabel;
   }
 
   // Method to handle node dragging

@@ -31,7 +31,7 @@ export class RequestComponent implements OnInit{
     console.log('Received network response from server');
     console.log(res);
     this.graph_nodes = res.nodes.map(gitNode => {
-      return new GraphNode(gitNode.id, gitNode.name);
+      return new GraphNode(gitNode.id, gitNode.name, gitNode.label);
     });
     this.graph_edges = res.rel.map(gitEdge => {
       return new GraphEdge(gitEdge.id, gitEdge.label, gitEdge.source, gitEdge.dest);
@@ -43,7 +43,7 @@ export class RequestComponent implements OnInit{
     console.log('Received path response from server');
     console.log(res);
     this.path_nodes = res.nodes.map(gitNode => {
-      return new GraphNode(gitNode.id, gitNode.name);
+      return new GraphNode(gitNode.id, gitNode.name, gitNode.label);
     });
     this.path_edges = res.rel.map(gitEdge => {
       return new GraphEdge(gitEdge.id, gitEdge.label, gitEdge.source, gitEdge.dest);
