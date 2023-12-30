@@ -1,0 +1,61 @@
+<ngx-graph
+  class="chart-container"
+  layout= "d3ForceDirected"
+  [view]="[1000, 900]"
+  [showMiniMap]="true"
+  [center$]="center$"
+  [links]=edges
+  [nodes]=nodes
+  xmlns:svg="http://www.w3.org/1999/XSL/Transform">
+
+  <ng-template #defsTemplate>
+    <svg:marker id="arrow" viewBox="0 -5 10 10" refX="8" refY="0" markerWidth="4" markerHeight="4" orient="auto">
+      <svg:path d="M0,-5L10,0L0,5" class="arrow-head" />
+    </svg:marker>
+  </ng-template>
+  <ng-template #nodeTemplate let-node>
+    <svg:g class="node">
+      <svg:g class="node" (mousedown)="onNodeMouseDown($event, node)" (mouseup)="onNodeMouseUp($event)">
+        <!-- Circle representing node -->
+      <svg:circle
+        *ngIf="node.type === 'User'"
+        [attr.r]="node.dimension.width/2"
+        [attr.fill]="node.data.color"></svg:circle>
+      <svg:rect
+        *ngIf="node.type === 'Repo'"
+        class="repository-node"
+        width="40" height="20"
+        [attr.fill]="node.data.color"></svg:rect>
+        <!-- Node Label -->
+        <svg:text *ngIf="node.showFullLabel" class="node-label" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
+          {{ node.label }}
+        </svg:text>
+        <!-- Node Label on Click -->
+        <svg:text *ngIf="!node.showFullLabel" class="node-label-click" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle" (click)="toggleLabel(node)">
+          {{node.label.charAt(0)}}
+        </svg:text>
+       <!-- <svg:text class="node-avatar" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
+          {{node.type}}
+        </svg:text> -->
+
+      </svg:g>
+    </svg:g>
+  </ng-template>
+
+  <ng-template #linkTemplate let-link>
+    <svg:g class="edge">
+      <svg:path class="line" stroke-width="4" marker-end="url(#arrow)"></svg:path>
+      <svg:text class="edge-label" text-anchor="middle">
+        <textPath
+          class="text-path"
+          [attr.href]="'#' + link.id"
+          [style.dominant-baseline]="link.dominantBaseline"
+          startOffset="50%"
+        >
+          {{link.label.charAt(0)}}
+        </textPath>
+      </svg:text>
+    </svg:g>
+  </ng-template>
+</ngx-graph>
+

@@ -1,0 +1,74 @@
+<div class="form">
+  <div class="settings">
+    <h2>Get network graph:</h2>
+    <div class="form_container">
+      <form class="form_field">
+        Root type: <br>
+        <input id="root_user" type="radio" name="type" value="User" [defaultValue]="true" [(ngModel)]="root_type">
+        <label for="root_user">User</label><br>
+        <input id="root_repo" type="radio" name="type" value="Repo" [defaultValue]="false" [(ngModel)]="root_type">
+        <label for="root_repo">Repository</label>
+      </form>
+      <form class="form_field">
+        <label for="root_name">Root name:</label> <br>
+        <input type="text" id="root_name" [defaultValue]="'ArtInLines'" name="root_name" [(ngModel)]="root_name"><br>
+        <label class="error_label" for="root_name" *ngIf="unknownRootNode">Node can not be found.<br>Check spelling or try other.</label>
+      </form>
+      <form class="form_field">
+        <label for="max_distance">Maximum distance:</label><br>
+        <input type="number" id="max_distance" [defaultValue]="1" name="max_distance" [(ngModel)]="max_distance"><br>
+      </form>
+      <form class="form_field">
+        <input type="submit" value="Generate graph!" (click)="requestData()">
+      </form>
+    </div>
+    <h2>Highlight shortest path:</h2>
+    <div class="form_container">
+      <form class="form_field">
+        Destination type: <br>
+        <input id="dest_user" type="radio" name="type" value="User" [defaultValue]="true" [(ngModel)]="dest_type">
+        <label for="dest_user">User</label><br>
+        <input id="dest_repo" type="radio" name="type" value="Repo" [defaultValue]="false" [(ngModel)]="dest_type">
+        <label for="dest_repo">Repository</label>
+      </form>
+      <form class="form_field">
+        <label for="dest_name">Destination name:</label> <br>
+        <input type="text" id="dest_name" [defaultValue]="'torvalds'" name="dest_name" [(ngModel)]="dest_name"><br>
+        <label class="error_label" for="root_name" *ngIf="unknownDestNode">Node can not be found.<br>Check spelling or try other.</label>
+      </form>
+      <form class="form_field">
+        <input type="submit" value="Show path!" (click)="getShortestPath()">
+      </form>
+    </div>
+  </div>
+  <div class="settings">
+    <h2>Notes:</h2>
+    <ul>
+      <li>Network graphs with distances greater than 1 will lead to very high node count which our site and your browser might not be able to handle.</li>
+      <li>
+        For that reason, you currently can't highlight n-cliques separately. <br>
+        The 1-clique of a node is just all nodes with a maximum distance of 1, which you can already display with the existing functionality.<br>
+        All higher cliques don't make sense as the site can't really display networks greater than two degrees.
+      </li>
+    </ul>
+    <h2>Symbol Key:</h2>
+    <ul>
+      <li>Nodes:</li>
+      <ul>
+        <li>Circle: User</li>
+        <li>Rectangle: Repository</li>
+      </ul>
+      <li>Edges:</li>
+      <ul>
+        <li>F: Follow</li>
+        <li>C: Contribution</li>
+        <li>O: Ownership</li>
+        <li>S: Star</li>
+        <li>W: Written In (Language)</li>
+      </ul>
+    </ul>
+  </div>
+</div>
+<div class="form">
+  <app-network id="graph" [nodes]="graph_nodes" [edges]="graph_edges" [path_nodes]="path_nodes" [path_edges]="path_edges"></app-network>
+</div>
