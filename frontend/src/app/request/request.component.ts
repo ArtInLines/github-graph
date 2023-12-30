@@ -24,15 +24,24 @@ export class RequestComponent implements OnInit{
   graph_edges: GraphEdge[] = new Array<GraphEdge>();
   path_nodes: GraphNode[] = new Array<GraphNode>();
   path_edges: GraphEdge[] = new Array<GraphEdge>();
+  unknownRootNode: boolean = false;
+  unknownDestNode: boolean = false;
 
   ngOnInit() {
     this.requestData();
   }
 
   async requestData(): Promise<void> {
-    let res: GitResponse = await this.networkService.getNetwork(1, this.max_distance, this.root_type, this.root_name);
-    console.log('Received network response from server');
-    console.log(res);
+    let res: GitResponse;
+    try {
+      res = await this.networkService.getNetwork(1, this.max_distance, this.root_type, this.root_name);
+      console.log('Received network response from server');
+      console.log(res);
+    } catch (e) {
+      this.unknownRootNode = true;
+      return;
+    }
+    this.unknownRootNode = false;
     this.graph_nodes = res.nodes.map(gitNode => {
       return new GraphNode(gitNode.id, gitNode.name, gitNode.label);
     });
@@ -42,9 +51,16 @@ export class RequestComponent implements OnInit{
   }
 
   async getShortestPath(): Promise<void> {
-    let res: PathResponse = await this.pathService.getShortestPath(this.root_name, this.dest_name, this.root_type, this.dest_type);
-    console.log('Received path response from server');
-    console.log(res);
+    let res: PathResponse;
+    try {
+      res = await this.pathService.getShortestPath(this.root_name, this.dest_name, this.root_type, this.dest_type);
+      console.log('Received path response from server');
+      console.log(res);
+    } catch (e) {
+      this.unknownDestNode = true;
+      return;
+    }
+    this.unknownDestNode = false;
     this.graph_nodes = res.segmentNodes.map((gitNode: GitNode) => {
       return new GraphNode(gitNode.id, gitNode.name, gitNode.label);
     });

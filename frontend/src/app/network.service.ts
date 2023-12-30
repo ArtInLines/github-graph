@@ -9,10 +9,13 @@ export class NetworkService {
   constructor() { }
 
   async getNetwork(minDist: number, maxDist: number, type: string, start: string): Promise<GitResponse> {
-    return await fetch(this.url + "/getRelatives?" + "minDist=" + minDist + "&maxDist=" + maxDist + "&type=" + type + "&start=" + start)
-      .then( res => res.json())
-      .then( (res: GitResponse) => {
+    let res: Response = await fetch(this.url + "/getRelatives?" + "minDist=" + minDist + "&maxDist=" + maxDist + "&type=" + type + "&start=" + start);
+    if ( res.status == 204 ) {
+      throw new Error("Node doesn't exist");
+    } else {
+      return res.json().then((res: GitResponse) => {
         return res;
       });
+    }
   }
 }

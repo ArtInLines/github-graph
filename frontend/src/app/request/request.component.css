@@ -13,3 +13,7 @@ div.form_container {
 .form_field {
   margin-left: 20px;
 }
+.error_label {
+  color: red;
+  font-size: smaller;
+}

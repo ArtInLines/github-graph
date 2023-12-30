@@ -10,7 +10,8 @@
     </form>
     <form class="form_field">
       <label for="root_name">Root name:</label> <br>
-      <input type="text" id="root_name" [defaultValue]="'ArtInLines'" name="root_name" [(ngModel)]="root_name">
+      <input type="text" id="root_name" [defaultValue]="'ArtInLines'" name="root_name" [(ngModel)]="root_name"><br>
+      <label class="error_label" for="root_name" *ngIf="unknownRootNode">Node can not be found.<br>Check spelling or try other.</label>
     </form>
     <form class="form_field">
       <label for="max_distance">Maximum distance:</label><br>
@@ -34,7 +35,8 @@
     </form>
     <form class="form_field">
       <label for="dest_name">Destination name:</label> <br>
-      <input type="text" id="dest_name" [defaultValue]="'torvalds'" name="dest_name" [(ngModel)]="dest_name">
+      <input type="text" id="dest_name" [defaultValue]="'torvalds'" name="dest_name" [(ngModel)]="dest_name"><br>
+      <label class="error_label" for="root_name" *ngIf="unknownDestNode">Node can not be found.<br>Check spelling or try other.</label>
     </form>
     <form class="form_field">
       <input type="submit" value="Show path!" (click)="getShortestPath()">
