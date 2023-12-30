@@ -19,7 +19,7 @@
         <!-- Circle representing node -->
       <svg:circle
         [attr.r]="node.dimension.width/2"
-        [attr.fill]="getEdgeColor(node.data.link.label)"></svg:circle>
+        [attr.fill]="node.data.color"></svg:circle>
         <!-- Node Label -->
         <svg:text *ngIf="node.showFullLabel" class="node-label" [attr.x]="-node.dimension.width / 2" [attr.y]="0" text-anchor="middle">
           {{ node.label }}
