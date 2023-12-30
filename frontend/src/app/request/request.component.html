@@ -1,8 +1,7 @@
-
 <div class="form">
   <div class="settings">
 <div>
-  <b>Get network graph:</b><br>
+  <b><h2>Get network graph:</h2></b><br>
   <div class="form_container">
     <form class="form_field">
       Root type: <br>
@@ -26,7 +25,7 @@
 </div>
 </div>
 <div>
-  <b>Highlight shortest path:</b><br>
+  <b><h2>Highlight shortest path:</h2></b><br>
   <div class="form_container">
     <form class="form_field">
       Destination type: <br>
@@ -44,12 +43,11 @@
       <input type="submit" value="Show path!" (click)="getShortestPath()">
     </form>
 
-  </div>
-</div>
+
   </div>
 </div>
 <div>
-  <b>Notes:</b>
+  <b><h2>Notes:</h2></b>
   <ul>
     <li>Network graphs with distances greater than 1 will lead to very high node count which our site and your browser might not be able to handle.</li>
     <li>For that reason, you currently can't highlight n-cliques separately. <br>
@@ -58,4 +56,8 @@
     </li>
   </ul>
 </div>
+  </div>
+</div>
+<div class="form">
 <app-network [nodes]="graph_nodes" [edges]="graph_edges" [path_nodes]="path_nodes" [path_edges]="path_edges"></app-network>
+</div>
