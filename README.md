@@ -96,8 +96,8 @@ We specify the following labels with their specific attributes for edges:
   - (User) -> (Repo)
 - WRITTEN_IN
   - (Repo) -> (Lang)
-  - abs: int [Lines of Code in the Repo that were written in the Language]
-  - rel: float [Percentage (0 to 1) of code in the Repo that were written in the Language]
+  - abs: int \[Lines of Code in the Repo that were written in the Language\]
+  - rel: float \[Percentage (0 to 1) of code in the Repo that were written in the Language\]
 
 Lastly, we shall give some examples to illustrate this Data Model:
 
@@ -105,21 +105,21 @@ Lastly, we shall give some examples to illustrate this Data Model:
 
 Our notation for specifying the model is as follows:
 
-- <Label1>
-  - <Key1>: <Value-Type1> (<Optional Constraint>) [<Optional Documentation>]
-  - <Key2>: <Value-Type2> [<Optional Documentation>]
-- <Label2>
-  - <Key3>: <Value-Type3>
+- \<Label1\>
+  - \<Key1\>: \<Value-Type1\> (\<Optional Constraint\>) \[\<Optional Documentation\>\]
+  - \<Key2\>: \<Value-Type2\> \[\<Optional Documentation\>\]
+- \<Label2\>
+  - \<Key3\>: \<Value-Type3\>
 
 For edges, we expand this notation to also specify the labels of nodes that sit on either side of the relation:
 
-- <Label1>
-  - (<Node-Label-From1>) -> (<Node-Label-To1>)
-  - <Key1>: <Value-Type1>
-  - <Key2>: <Value-Type2>
-- <Label2>
-  - (<Node-Label-From2>) -> (<Node-Label-To2>)
-  - <Key3>: <Value-Type3>
+- \<Label1\>
+  - (\<Node-Label-From1\>) -> (\<Node-Label-To1\>)
+  - \<Key1\>: \<Value-Type1\>
+  - \<Key2\>: \<Value-Type2\>
+- \<Label2\>
+  - (\<Node-Label-From2\>) -> (\<Node-Label-To2\>)
+  - \<Key3\>: \<Value-Type3\>
 
 ## API
 
